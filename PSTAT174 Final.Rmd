@@ -21,7 +21,7 @@ library(tsdl)
 library(forecast)
 ```
 
-## Question 1: Glossary
+## Glossary
 ```{r, eval=FALSE}
 # defines working directory
 getwd()
@@ -97,20 +97,15 @@ library(MASS)
 
 ```
 
-## Question 2: Project
+## Project
 ```{r}
-#2a : data set description
-```
+# Project description 
 The data set I plan to use is the US military expense since 1960. This is money that the US military has used for the defense budget. Although the dataset has two other columns with population of U.S. and GDP, I think the defense budget is more interesting. The GDP and population follow a constant, linear relationship.
 
-```{r}
-#2b : motivation and objectives
-```
+# Project motivations and objectives
 This data is interesting to me because I have been studying history, especially US history and the wars it has fought or participated in. This data gives me an idea how much the US government spent during the wars and also in the present day. I plan to address the prediction of the defense budget in the next few years (forecasting).
 
-```{r}
-#2c : plot main features
-  # read dataset
+# reading in dataset
 spending_data <- read.csv("/Users/josephchang/Desktop/MilitarySpending.csv.xls")
 spending_data
 plot.ts(spending_data$Year, spending_data$DefenseBudget)
