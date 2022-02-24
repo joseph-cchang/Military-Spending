@@ -19,6 +19,7 @@ devtools::install_github("FinYang/tsdl")
 library(tsdl)
 library(forecast)
 library(astsa)
+library(qpcR)
 ```
 
 # Project description 
@@ -158,11 +159,28 @@ acvf = acf(spent, plot=FALSE, lag.max= length(spent))$acf[,1,1]* var(spent)
 m = length(acvf)
 lh.ia = innovations.algorithm(m+1, acvf)
 lh.ia$thetas[9, 1:9]
+
+# model estimation for AR model using Yule-Walker
+fit_ar <- ar(dat.2, method = "yw")
+
+# construct 95% CI
+ar1.se <- sqrt(fit_ar$asy.var.coef)
+c(fit_ar$ar - 1.96*ar1.se, fit.ar$ar + 1.96*ar1.se)
+
 ```
 
 
-## 
+## AICC comparison
 ```{r}
+fit_ma9 <- arima(spent, order=c(0,0,9), method= "ML")
+fit_ar9 <- arima(spent, order=c(9,0,0), method= "ML")
+fit_arma99 <- arima(spent, order=c(9,0,9), method = "ML")
+
+
+AICc(fit_ma9)
+AICc(fit_ar9)
+AICc(fit_arma99)
+
 
 ```
 
