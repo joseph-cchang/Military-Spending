@@ -100,11 +100,11 @@ var(dat)
 var(dat.2)
 var(dat.3)
 
-# I differenced the data and found d to be 2. Based from the variance, the lowest variance is when d=2. At d =3, variance is increased again, therefore I will take d=2.
+# I differenced the data and found d to be 2. Based from the variance, the lowest variance is when d=2. At d=3, variance is increased again, therefore I will take d=2.
 ```
 
 
-## plot ACF and PACF: Model Identification
+## Model Identification
 ```{r}
 # ACF, PACF for spent
 opar <- par(no.readonly = T)
@@ -116,8 +116,8 @@ par(opar)
 # ACF, PACF for dat (difference once)
 opar <- par(no.readonly = T)
 par(mfrow=c(2,1))
-acf(dat, lag.max = 100)
-pacf(dat, lag.max=100)
+acf(dat, lag.max = 100, main="Sample acf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
+pacf(dat, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
 
 # ACF, PACF for dat.2 (difference twice)
 opar <- par(no.readonly = T)
@@ -125,40 +125,36 @@ par(mfrow=c(2,1))
 acf(dat.2, lag.max=100, main="Sample acf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
 pacf(dat.2, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
 
-# Based from the ACF, PACF graphs, one candidate for this model is ARMA(9,9). Since ACF and PACF both show lag 9 outside the confidence interval, one could assume this to be ARMA(9,9). Another candidate could be SARIMA(0,2,0)(1,0,1)_9. Since I found difference to be 2, d=2, P = Q = 1, and seasonality at 9. 
+# Based from the ACF, PACF graphs, one candidate for this model is ARMA(9,9). Since ACF and PACF both show lag 9 outside the confidence interval, one could assume this to be ARMA(9,9). 
+
+# maybe not...Another candidate could be SARIMA(0,2,0)(1,0,1)_9. Since I found difference to be 2, d=2, P = Q = 1, and seasonality at 9. 
 ```
 
-## Select models to fit: Model estimation
+## Model estimation
 ```{r}
-# Model 1 : SARIMA(0, 2, 0)(1, 0, 1) 9
-fit.1 <- sarima(xdata = spent, details = F, p=0, d=2, q=0, P=1, D=0, Q=1, S=9 )
-cat("Coefficients")
-fit.1$fit$coef
+# Candidate models:
+df <- expand.grid(p=0:10, q=0:10) 
+df <- cbind(df, AICc=NA)
 
-# variance of white noise
-cat("Variance of White Noise")
-fit.1$fit$sigma2
+# Compute AICc:
+for (i in 1:nrow(df)) {
+  sarima.obj <- NULL
+  try(arima.obj <- arima(spent, order=c(df$p[i],1, df$q[i]),
+method="ML"))
+  if (!is.null(arima.obj)) { df$AICc[i] <- AICc(arima.obj) }
+  # print(df[i, ])
+}
+df[which.min(df$AICc), ]
 
+order(df$AICc)
+df[order(df$AICc),]
+# I will take (1,1) 
 
-# Model 2 : ARMA(9,9)
-fit.2 <- sarima(xdata = spent, details = F, no.constant = T, p=0, d=2, q=0, P=1, D=0, Q=1, S=9 )
-cat("Coefficients")
-fit.1$fit$coef
-  
-# variance of white noise
-cat("Variance of White Noise")
-fit.2$fit$sigma2
-
-# One candidate could be (1+0.457 B^9)Yt = (1-0.1825 B^9) Zt 
-# (1 + 0.457 B^9)(1-B^9)(1-B)Xt = (1-0.1825 B^9) Zt where Zt ~ WN(0, 0.0625159)
-
-
-# MA(9)
-source("innovations.r")
-acvf = acf(spent, plot=FALSE, lag.max= length(spent))$acf[,1,1]* var(spent)
-m = length(acvf)
-lh.ia = innovations.algorithm(m+1, acvf)
-lh.ia$thetas[9, 1:9]
+# Final model
+ind <- which.min(df$AICc)
+fit <- arima(spent, order = c(1,1,0), 
+             method = "ML")
+fit
 
 # model estimation for AR model using Yule-Walker
 fit_ar <- ar(dat.2, method = "yw")
@@ -168,6 +164,28 @@ ar1.se <- sqrt(fit_ar$asy.var.coef)
 c(fit_ar$ar - 1.96*ar1.se, fit.ar$ar + 1.96*ar1.se)
 
 ```
+
+## Model Diagnostics
+```{r}
+res <- residuals(fit)
+mean(res)
+var(res)
+
+par(mfrow=c(1,1))
+ts.plot(res, main  = "Fitted Residuals")
+t <- 1:length(res)
+fit.res = lm(res~t)
+abline(fit.res)
+abline(h=mean(res), col = "blue")
+
+par(mfrow=c(1,2))
+acf(res, main = "Autocorrelation")
+pacf(res, main = "Partial Autocorrelation")
+
+# Testing for independence of residuals
+Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 1)
+```
+
 
 
 ## AICC comparison
