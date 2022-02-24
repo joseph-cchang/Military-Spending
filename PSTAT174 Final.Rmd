@@ -15,12 +15,163 @@ library(ROCR)
 library(dplyr)
 library(tinytex)
 library(MASS)
-#install.packages("devtools")
-#install.packages("forecast")
 devtools::install_github("FinYang/tsdl")
 library(tsdl)
 library(forecast)
+library(astsa)
 ```
+
+# Project description 
+The data set I plan to use is the US military expense since 1960. This is money that the US military has used for the defense budget. Although the dataset has two other columns with population of U.S. and GDP, I think the defense budget is more interesting. The GDP and population follow a constant, linear relationship.
+
+# Project motivations and objectives
+This data is interesting to me because I have been studying history, especially US history and the wars it has fought or participated in. This data gives me an idea how much the US government spent during the wars and also in the present day. I plan to address the prediction of the defense budget in the next few years (forecasting).
+
+There seems to be a trend that is positive but there is no seasonality and no apparent sharp change in behavior.
+
+## Data Import
+```{r}
+# reading in dataset
+spending_data <- read.csv("/Users/josephchang/Desktop/MilitarySpending.csv.xls")
+
+plot.ts(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
+
+plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
+```
+
+# transformation
+```{r}
+# boxcox transformation
+t = 1:length(spending_data$DefenseBudget)
+fit = lm(spending_data$DefenseBudget~t)
+bcTransform = boxcox(spending_data$DefenseBudget ~ t, plotit=TRUE)
+
+lambda = bcTransform$x[which(bcTransform$y == max(bcTransform$y))]
+spent = (1/lambda)*(spending_data$DefenseBudget^lambda-1)
+
+spending_data.log = log(spending_data$DefenseBudget)
+plot.ts(spending_data.log)
+
+spending_data.sqrt = log(spending_data$DefenseBudget)
+plot.ts(spending_data.sqrt)
+
+# compare transforms
+op=par(mfrow=c(2,2))
+ts.plot(spending_data$DefenseBudget, main = "Original Time Series")
+ts.plot(spent, main = "Box-cox Transform")
+ts.plot(spending_data.log, main = "Log transform")
+ts.plot(spending_data.sqrt, main = "Square root transform")
+
+# histogram of spent vs original
+hist(spent)
+hist(spending_data$DefenseBudget)
+# spent seems more normal while original is skewed
+
+# time series plot of spent vs original
+plot.ts(spent)
+plot.ts(spending_data$DefenseBudget)
+# both plots look around the same, but spent seems to have more spent in the median
+
+
+# Based from the histogram, I will use the spent instead of the original data 
+```
+
+## Differencing
+```{r}
+# difference once
+dat <- diff(spent, 1)
+dat
+plot.ts(dat, type= "l")
+
+# twice differenced
+dat.2 <- diff(dat, 1)
+dat.2
+plot.ts(dat.2, type= "l")
+
+# three times differenced
+dat.3 <- diff(dat.2,1)
+dat.3
+plot(dat.3, type= "l")
+
+# check variance
+var(spent)
+var(dat)
+var(dat.2)
+var(dat.3)
+
+# I differenced the data and found d to be 2. Based from the variance, the lowest variance is when d=2. At d =3, variance is increased again, therefore I will take d=2.
+```
+
+
+## plot ACF and PACF: Model Identification
+```{r}
+# ACF, PACF for spent
+opar <- par(no.readonly = T)
+par(mfrow=c(2,1))
+acf(spent, lag.max=100)
+pacf(spent, lag.max=100)
+par(opar)
+
+# ACF, PACF for dat (difference once)
+opar <- par(no.readonly = T)
+par(mfrow=c(2,1))
+acf(dat, lag.max = 100)
+pacf(dat, lag.max=100)
+
+# ACF, PACF for dat.2 (difference twice)
+opar <- par(no.readonly = T)
+par(mfrow=c(2,1))
+acf(dat.2, lag.max=100, main="Sample acf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
+pacf(dat.2, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
+
+# Based from the ACF, PACF graphs, one candidate for this model is ARMA(9,9). Since ACF and PACF both show lag 9 outside the confidence interval, one could assume this to be ARMA(9,9). Another candidate could be SARIMA(0,2,0)(1,0,1)_9. Since I found difference to be 2, d=2, P = Q = 1, and seasonality at 9. 
+```
+
+## Select models to fit: Model estimation
+```{r}
+# Model 1 : SARIMA(0, 2, 0)(1, 0, 1) 9
+fit.1 <- sarima(xdata = spent, details = F, p=0, d=2, q=0, P=1, D=0, Q=1, S=9 )
+cat("Coefficients")
+fit.1$fit$coef
+
+# variance of white noise
+cat("Variance of White Noise")
+fit.1$fit$sigma2
+
+
+# Model 2 : ARMA(9,9)
+fit.2 <- sarima(xdata = spent, details = F, no.constant = T, p=0, d=2, q=0, P=1, D=0, Q=1, S=9 )
+cat("Coefficients")
+fit.1$fit$coef
+  
+# variance of white noise
+cat("Variance of White Noise")
+fit.2$fit$sigma2
+
+# One candidate could be (1+0.457 B^9)Yt = (1-0.1825 B^9) Zt 
+# (1 + 0.457 B^9)(1-B^9)(1-B)Xt = (1-0.1825 B^9) Zt where Zt ~ WN(0, 0.0625159)
+
+
+# MA(9)
+source("innovations.r")
+acvf = acf(spent, plot=FALSE, lag.max= length(spent))$acf[,1,1]* var(spent)
+m = length(acvf)
+lh.ia = innovations.algorithm(m+1, acvf)
+lh.ia$thetas[9, 1:9]
+```
+
+
+## 
+```{r}
+
+```
+
+
+fit model, (for loop) using aICC, find 2 best models, do diagnostics ( boxtest,), bestmodel passes, forecasting
+```{r}
+
+```
+
 
 ## Glossary
 ```{r, eval=FALSE}
@@ -94,74 +245,5 @@ library(MASS)
       # code for a loop to choose a model with lowest AICc:
 #for (i in 0:4){for (j in 0:4){ print(i); print(j); print(AICc(arima(x, order = 
 #c(i,0,j), method = "ML")))}}
-
-
 ```
-
-## Project
-```{r}
-# Project description 
-The data set I plan to use is the US military expense since 1960. This is money that the US military has used for the defense budget. Although the dataset has two other columns with population of U.S. and GDP, I think the defense budget is more interesting. The GDP and population follow a constant, linear relationship.
-
-# Project motivations and objectives
-This data is interesting to me because I have been studying history, especially US history and the wars it has fought or participated in. This data gives me an idea how much the US government spent during the wars and also in the present day. I plan to address the prediction of the defense budget in the next few years (forecasting).
-```
-There seems to be a trend that is positive but there is no seasonality and no apparent sharp change in behavior.
-
-
-## reading in data
-```{r}
-# reading in dataset
-spending_data <- read.csv("/Users/josephchang/Desktop/MilitarySpending.csv.xls")
-spending_data
-plot.ts(spending_data$Year, spending_data$DefenseBudget)
-plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "year", type="l")
-```
-
-
-# transformation, differencing
-```{r}
-# this is where transformation or difference
-
-# boxcox
-t = 1:length(spending_data$DefenseBudget)
-fit = lm(spending_data$DefenseBudget~t)
-bcTransform = boxcox(spending_data$DefenseBudget ~ t, plotit=TRUE)
-
-# difference once
-dat <- diff(spending_data$DefenseBudget, 1)
-dat
-
-# twice differenced
-dat.2 <- diff(dat, 1)
-dat.2
-plot.ts(dat.2, type= "l")
-
-# three times differenced
-dat.3 <- diff(dat.2,1)
-dat.3
-plot(dat.3, type= "l")
-
-# check variance
-var(spending_data$DefenseBudget)
-var(dat)
-var(dat.2)
-var(dat.3)
-```
-I differenced the data and found out d=2. I used variance to check and found its lowest variance when d=2.
-
-## plot ACF and PACF
-```{r}
-# this is where I plot ACF and PACF
-acf(spending_data$DefenseBudget, lag.max=100)
-pacf(spending_data$DefenseBudget, lag.max=100)
-
-acf(dat, lag.max = 100)
-pacf(dat, lag.max=100)
-
-acf(dat.2, lag.max=100, main="Sample acf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
-pacf(dat.2, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
-```
-
-There are some candidates for this model. One is ARMA(9,9). Since ACF and PACF both show lag 9 outside the confidence interval, one could assume this to be ARMA(9,9). Another candidate could be SARIMA(0,2,0)(1,0,1)_9. Since I found difference to be 2, d=2, P = Q = 1, and seasonality at 9. 
 
