@@ -47,6 +47,7 @@ t = 1:length(spending_data$DefenseBudget)
 fit = lm(spending_data$DefenseBudget~t)
 bcTransform = boxcox(spending_data$DefenseBudget ~ t, plotit=TRUE)
 
+# best lambda
 lambda = bcTransform$x[which(bcTransform$y == max(bcTransform$y))]
 spent = (1/lambda)*(spending_data$DefenseBudget^lambda-1)
 
@@ -125,9 +126,6 @@ par(mfrow=c(2,1))
 acf(dat.2, lag.max=100, main="Sample acf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
 pacf(dat.2, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
 
-# Based from the ACF, PACF graphs, one candidate for this model is ARMA(9,9). Since ACF and PACF both show lag 9 outside the confidence interval, one could assume this to be ARMA(9,9). 
-
-# maybe not...Another candidate could be SARIMA(0,2,0)(1,0,1)_9. Since I found difference to be 2, d=2, P = Q = 1, and seasonality at 9. 
 ```
 
 ## Model estimation
@@ -135,6 +133,8 @@ pacf(dat.2, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expres
 # Candidate models:
 df <- expand.grid(p=0:10, q=0:10) 
 df <- cbind(df, AICc=NA)
+
+# Initially, I found lowest AICc using parameters(9,1). However, the coefficient at MA(1) produced a -1.000 value meaning I may have overdifferenced. Therefore, I will revert back to differencing at d=1.
 
 # Compute AICc:
 for (i in 1:nrow(df)) {
@@ -148,16 +148,15 @@ df[which.min(df$AICc), ]
 
 order(df$AICc)
 df[order(df$AICc),]
-# I will take (1,1) 
+# using principle of parsimony, I will consider (1,0)
 
 # Final model
-ind <- which.min(df$AICc)
 fit <- arima(spent, order = c(1,1,0), 
              method = "ML")
 fit
 
 # model estimation for AR model using Yule-Walker
-fit_ar <- ar(dat.2, method = "yw")
+fit_ar <- ar(dat, method = "yw")
 
 # construct 95% CI
 ar1.se <- sqrt(fit_ar$asy.var.coef)
@@ -184,22 +183,37 @@ pacf(res, main = "Partial Autocorrelation")
 
 # Testing for independence of residuals
 Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 1)
+
+Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 1)
+
+Box.test(res^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
+
+# test for normality of residuals
+shapiro.test(res)
+
+# Histogram and qq plot
+par(mfrow=c(1,2))
+hist(res, main= "Histogram")
+qqnorm(res)
+qqline(res, col = "blue")
 ```
 
+Final model should be 
+(1-0.97947B)(1-B.....)
 
+## Data Forecasting
 
-## AICC comparison
 ```{r}
-fit_ma9 <- arima(spent, order=c(0,0,9), method= "ML")
-fit_ar9 <- arima(spent, order=c(9,0,0), method= "ML")
-fit_arma99 <- arima(spent, order=c(9,0,9), method = "ML")
-
-
-AICc(fit_ma9)
-AICc(fit_ar9)
-AICc(fit_arma99)
-
-
+# Predict 10 future observations and plot
+par(mfrow=c(1,1))
+mypred <- predict(fit, n.ahead=10)
+ts.plot(c(spent), xlim=c(1, length(spent)+10), ylim  = c(min(spent)*0.8, max(spent)*1.2))
+points((length(spent)+1):(length(spent) +10), col="red", 
+  (lambda*mypred$pred +1)^(1/lambda))
+lines((length(spent) +1):(length(spent)+10), 
+      (lambda*mypred$pred + 1.96*mypred$se+1)^(1/lambda), lty=2)
+lines((length(spent) +1):(length(spent)+10), 
+      (lambda*mypred$pred - 1.96*mypred$se+1)^(1/lambda), lty=2)
 ```
 
 
