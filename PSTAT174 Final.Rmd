@@ -214,12 +214,12 @@ Final model should be
 # Predict 10 future observations and plot
 par(mfrow=c(1,1))
 mypred <- predict(fit, n.ahead=10)
-ts.plot(c(spent), xlim=c(1, length(spent)+10), ylim  = c(min(spent)*0.8, max(spent)*1.2))
-points((length(spent)+1):(length(spent) +10), col="red", 
+ts.plot(c(spending_data$DefenseBudget), xlim=c(1, length(spending_data$DefenseBudget)+20), ylim  = c(min(spending_data$DefenseBudget)*0.8, max(spending_data$DefenseBudget)*2.5))
+points((length(spending_data$DefenseBudget)+1):(length(spending_data$DefenseBudget) +10), col="red", 
       (lambda*mypred$pred +1)^(1/lambda))
-lines((length(spent) +1):(length(spent)+10), 
+lines((length(spending_data$DefenseBudget) +1):(length(spending_data$DefenseBudget)+10), 
       (lambda*mypred$pred + 1.96*mypred$se+1)^(1/lambda), lty=2)
-lines((length(spent) +1):(length(spent)+10), 
+lines((length(spending_data$DefenseBudget) +1):(length(spending_data$DefenseBudget)+10), 
       (lambda*mypred$pred - 1.96*mypred$se+1)^(1/lambda), lty=2)
 ```
 
