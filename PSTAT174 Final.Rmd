@@ -30,19 +30,23 @@ This data is interesting to me because I have been studying history, especially 
 
 There seems to be a trend that is positive but there is no seasonality and no apparent sharp change in behavior.
 
-## Data Import
+## Data Importation
 ```{r}
-# reading in dataset
+# load data
 spending_data <- read.csv("/Users/josephchang/Desktop/MilitarySpending.csv.xls")
+spending_data
 
+# plot data
+plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
+
+# plot time series
 plot.ts(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
 
-plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
 ```
 
 # transformation
 ```{r}
-# boxcox transformation
+# Box-Cox transformation:
 t = 1:length(spending_data$DefenseBudget)
 fit = lm(spending_data$DefenseBudget~t)
 bcTransform = boxcox(spending_data$DefenseBudget ~ t, plotit=TRUE)
@@ -51,13 +55,14 @@ bcTransform = boxcox(spending_data$DefenseBudget ~ t, plotit=TRUE)
 lambda = bcTransform$x[which(bcTransform$y == max(bcTransform$y))]
 spent = (1/lambda)*(spending_data$DefenseBudget^lambda-1)
 
+# comparison of best lambda vs log/sqrt transformation
 spending_data.log = log(spending_data$DefenseBudget)
 plot.ts(spending_data.log)
 
 spending_data.sqrt = log(spending_data$DefenseBudget)
 plot.ts(spending_data.sqrt)
 
-# compare transforms
+# compare transforms on time series plot
 op=par(mfrow=c(2,2))
 ts.plot(spending_data$DefenseBudget, main = "Original Time Series")
 ts.plot(spent, main = "Box-cox Transform")
@@ -80,17 +85,17 @@ plot.ts(spending_data$DefenseBudget)
 
 ## Differencing
 ```{r}
-# difference once
+# difference once and plot
 dat <- diff(spent, 1)
 dat
 plot.ts(dat, type= "l")
 
-# twice differenced
+# twice differenced and plot
 dat.2 <- diff(dat, 1)
 dat.2
 plot.ts(dat.2, type= "l")
 
-# three times differenced
+# three times differenced and plot
 dat.3 <- diff(dat.2,1)
 dat.3
 plot(dat.3, type= "l")
@@ -161,15 +166,16 @@ fit_ar <- ar(dat, method = "yw")
 # construct 95% CI
 ar1.se <- sqrt(fit_ar$asy.var.coef)
 c(fit_ar$ar - 1.96*ar1.se, fit.ar$ar + 1.96*ar1.se)
-
 ```
 
 ## Model Diagnostics
 ```{r}
+# residual plots
 res <- residuals(fit)
 mean(res)
 var(res)
 
+# layout
 par(mfrow=c(1,1))
 ts.plot(res, main  = "Fitted Residuals")
 t <- 1:length(res)
@@ -177,6 +183,7 @@ fit.res = lm(res~t)
 abline(fit.res)
 abline(h=mean(res), col = "blue")
 
+# ACF and PACF
 par(mfrow=c(1,2))
 acf(res, main = "Autocorrelation")
 pacf(res, main = "Partial Autocorrelation")
@@ -199,7 +206,7 @@ qqline(res, col = "blue")
 ```
 
 Final model should be 
-(1-0.97947B)(1-B.....)
+(1-0.97947B)(1-B.....)Yt = (1-)
 
 ## Data Forecasting
 
@@ -209,7 +216,7 @@ par(mfrow=c(1,1))
 mypred <- predict(fit, n.ahead=10)
 ts.plot(c(spent), xlim=c(1, length(spent)+10), ylim  = c(min(spent)*0.8, max(spent)*1.2))
 points((length(spent)+1):(length(spent) +10), col="red", 
-  (lambda*mypred$pred +1)^(1/lambda))
+      (lambda*mypred$pred +1)^(1/lambda))
 lines((length(spent) +1):(length(spent)+10), 
       (lambda*mypred$pred + 1.96*mypred$se+1)^(1/lambda), lty=2)
 lines((length(spent) +1):(length(spent)+10), 
