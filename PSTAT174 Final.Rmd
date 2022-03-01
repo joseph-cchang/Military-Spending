@@ -203,6 +203,9 @@ par(mfrow=c(1,2))
 hist(res, main= "Histogram")
 qqnorm(res)
 qqline(res, col = "blue")
+
+
+# residuals pass Box.test and residuals are normal
 ```
 
 Final model should be 
@@ -225,82 +228,5 @@ lines((length(spending_data$DefenseBudget) +1):(length(spending_data$DefenseBudg
 
 
 fit model, (for loop) using aICC, find 2 best models, do diagnostics ( boxtest,), bestmodel passes, forecasting
-```{r}
 
-```
-
-
-## Glossary
-```{r, eval=FALSE}
-# defines working directory
-getwd()
-setwd("/Users/josephchang/Desktop")
-
-# reads data and plots data
-read.csv("/Users/josephchang/Desktop/MilitarySpending.csv.xls")
-plot.ts(spend$Year, spend$DefenseBudget)
-
-# simulate and plot ARMA models
-plot.ts(arima.sim(model=list(ar=c(0.8), ma=c(0.3)), n = 100, sd = 1), main="ARMA(1,1), ar
-c=0.8, ma c=0.3")
-
-plot(0:100,ARMAacf(ar=c(0.8), ma=c(0.3), lag.max=100),xlim=c(1,40),ylab="r",type="h",
-main="ACF for ARMA(1,1) ar c=0.8, ma c=0.3") ; abline(h=0)
-    
-# add trend and mean line to the original time series plot
-#abline()
-#abline(h=mean(), col='pink')
-
-# calculate and plot theoretical acf/pacf for ARMA models
-plot(ARMAacf(ar=c(-0.95), lag.max=40), col = 'blue', type='h', xlab='lag', ylim=c(-0.8,1))
-abline(h=0)
-plot(ARMAacf(ar=c(-0.95), lag.max=40, pacf=TRUE), type='h', xlab='lag', ylim=c(-0.8,1))
-abline(h=0)
-
-# calculate and plot sample acf/pacf;
-ar2 <- arima.sim(model=list(ar=c(0.8, -0.12), sd=1), n=200)
-acf(ar2, lag.max=20, main="Sample acf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
-pacf(ar2, lag.max=20, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
-
-# check whether a particular model is causal/invertible (R commands to find and plot roots of polynomials)
-polyroot(c(1, -1.3, 0.7))
-#source("plot.roots.R")
-#plot.roots(NULL,polyroot(c(1, -1.35, 0.77)), main="roots of ar part")
-#plot.roots(NULL,polyroot(c(1,0.64)), main="roots of ma part")
-#plot.roots(NULL,polyroot(c(1, -2, 2.02, -1.07, 0.34)), main="roots of ar part") 
-
-install.packages("UnitCircle")
-library(UnitCircle)
-uc.check(pol_ = c(1, -1.35,0.77), plot_output = TRUE)
-
-# perform Box-Cox transforms;
-library(MASS)
-#t = 1:length(wine)
-#fit = lm(wine~t)
-#bcTransform = boxcox(wine ~ t, plotit=TRUE)
-
-# perform differencing data at lags 1 and 12;
-#uspopdiff1 <- diff(uspop)
-#plot.ts(uspopdiff1)
-#abline(lm(uspopdiff1 ~ as.numeric(1:length(uspopdiff1))
-          
-#AP=read.table("pass.txt")
-#plot.ts(AP)
-#APdiff12 <- diff(AP, lag=12, differences = 1)
-#plot.ts(APdiff12)
-#abline(lm(APdiff12 ~ as.numeric(1:length(APdiff12))) )
-          
-# perform Yule-Walker estimation and find standard deviations of the estimates.
-#ar(x, aic=TRUE, order.max=NULL, method=c('yule-walker'))
-#x.ywest$ar
-
-# perform MLE and check AICC associated with the model.
-#x_fit40 = arima(x, order = c(4,0,0), method = "ML")
-#library(qpcR)
-#AICc(x_fit40)
-
-      # code for a loop to choose a model with lowest AICc:
-#for (i in 0:4){for (j in 0:4){ print(i); print(j); print(AICc(arima(x, order = 
-#c(i,0,j), method = "ML")))}}
-```
 
