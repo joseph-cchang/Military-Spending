@@ -226,6 +226,9 @@ lines((length(spending_data$DefenseBudget) +1):(length(spending_data$DefenseBudg
       (lambda*mypred$pred - 1.96*mypred$se+1)^(1/lambda), lty=2)
 ```
 
+need validation... test and train 
+
+
 
 fit model, (for loop) using aICC, find 2 best models, do diagnostics ( boxtest,), bestmodel passes, forecasting
 
