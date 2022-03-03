@@ -81,12 +81,19 @@ plot.ts(spending_data$DefenseBudget)
 
 
 # Based from the histogram, I will use the spent instead of the original data 
+
+
+# training and testing dataset
+length(spent)
+spent.train = spent[c(1:51)]
+spent.test  = spent[c(52:61)]
+
 ```
 
 ## Differencing
 ```{r}
 # difference once and plot
-dat <- diff(spent, 1)
+dat <- diff(spent.train, 1)
 dat
 plot.ts(dat, type= "l")
 
@@ -101,7 +108,7 @@ dat.3
 plot(dat.3, type= "l")
 
 # check variance
-var(spent)
+var(spent.train)
 var(dat)
 var(dat.2)
 var(dat.3)
@@ -115,8 +122,8 @@ var(dat.3)
 # ACF, PACF for spent
 opar <- par(no.readonly = T)
 par(mfrow=c(2,1))
-acf(spent, lag.max=100)
-pacf(spent, lag.max=100)
+acf(spent.train, lag.max=100)
+pacf(spent.train, lag.max=100)
 par(opar)
 
 # ACF, PACF for dat (difference once)
@@ -144,8 +151,7 @@ df <- cbind(df, AICc=NA)
 # Compute AICc:
 for (i in 1:nrow(df)) {
   sarima.obj <- NULL
-  try(arima.obj <- arima(spent, order=c(df$p[i],1, df$q[i]),
-method="ML"))
+  try(arima.obj <- arima(spent.train, order=c(df$p[i],2, df$q[i]), method="ML"))
   if (!is.null(arima.obj)) { df$AICc[i] <- AICc(arima.obj) }
   # print(df[i, ])
 }
@@ -153,25 +159,27 @@ df[which.min(df$AICc), ]
 
 order(df$AICc)
 df[order(df$AICc),]
-# using principle of parsimony, I will consider (1,0)
+# lowest AICc is using parameters (0, 8). However, this is still too large for lag.
+# using principle of parsimony and lowest AICC, I will consider the two best models which are (1,1) and (1,0) where p and q are respectively shown
 
-# Final model
-fit <- arima(spent, order = c(1,1,0), 
+# Final model 1
+fit1 <- arima(spent.train, order = c(1,1,1), 
              method = "ML")
-fit
+fit1
 
-# model estimation for AR model using Yule-Walker
-fit_ar <- ar(dat, method = "yw")
+# Final model 2
+fit2 <- arima(spent.train, order = c(1,1,0), 
+             method = "ML")
+fit2
 
-# construct 95% CI
-ar1.se <- sqrt(fit_ar$asy.var.coef)
-c(fit_ar$ar - 1.96*ar1.se, fit.ar$ar + 1.96*ar1.se)
 ```
 
 ## Model Diagnostics
 ```{r}
+
+# for fit1
 # residual plots
-res <- residuals(fit)
+res <- residuals(fit1)
 mean(res)
 var(res)
 
@@ -179,8 +187,8 @@ var(res)
 par(mfrow=c(1,1))
 ts.plot(res, main  = "Fitted Residuals")
 t <- 1:length(res)
-fit.res = lm(res~t)
-abline(fit.res)
+fit1.res = lm(res~t)
+abline(fit1.res)
 abline(h=mean(res), col = "blue")
 
 # ACF and PACF
@@ -189,9 +197,9 @@ acf(res, main = "Autocorrelation")
 pacf(res, main = "Partial Autocorrelation")
 
 # Testing for independence of residuals
-Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 1)
+Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 2)
 
-Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 1)
+Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 2)
 
 Box.test(res^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 
@@ -206,23 +214,64 @@ qqline(res, col = "blue")
 
 
 # residuals pass Box.test and residuals are normal
+
+
+# for fit2
+# residual plots
+res2 <- residuals(fit2)
+mean(res2)
+var(res2)
+
+# layout
+par(mfrow=c(1,1))
+ts.plot(res2, main  = "Fitted Residuals")
+t <- 1:length(res2)
+fit2.res2 = lm(res2~t)
+abline(fit2.res2)
+abline(h=mean(res2), col = "blue")
+
+# ACF and PACF
+par(mfrow=c(1,2))
+acf(res2, main = "Autocorrelation")
+pacf(res2, main = "Partial Autocorrelation")
+
+# Testing for independence of residuals
+Box.test(res2, lag = 8, type = c("Box-Pierce"), fitdf = 1)
+
+Box.test(res2, lag = 8, type = c("Ljung-Box"), fitdf = 1)
+
+Box.test(res2^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
+
+# test for normality of residuals
+shapiro.test(res2)
+
+# Histogram and qq plot
+par(mfrow=c(1,2))
+hist(res2, main= "Histogram")
+qqnorm(res2)
+qqline(res2, col = "blue")
+
+
+# residuals pass Box.test and residuals are normal
+fit1
 ```
 
 Final model should be 
-(1-0.97947B)(1-B.....)Yt = (1-)
+(1-0.8762B)(1-B)Xt = (1-0.375B)Zt, Zt ~ WN(0, 0.08775)
 
 ## Data Forecasting
 
 ```{r}
 # Predict 10 future observations and plot
 par(mfrow=c(1,1))
-mypred <- predict(fit, n.ahead=10)
-ts.plot(c(spending_data$DefenseBudget), xlim=c(1, length(spending_data$DefenseBudget)+20), ylim  = c(min(spending_data$DefenseBudget)*0.8, max(spending_data$DefenseBudget)*2.5))
-points((length(spending_data$DefenseBudget)+1):(length(spending_data$DefenseBudget) +10), col="red", 
-      (lambda*mypred$pred +1)^(1/lambda))
-lines((length(spending_data$DefenseBudget) +1):(length(spending_data$DefenseBudget)+10), 
+m <- length(spent.train)
+mypred <- predict(fit1, n.ahead=10)
+ts.plot(c(lambda*spent.train +1)^(1/lambda), xlim=c(1, length(lambda*spent.train)+10), ylim=c(100,1200) , xlab = "Years after 1960", ylab = "Billions of dollars")
+points((m+1):(m+10), col="red", (lambda*mypred$pred +1)^(1/lambda))
+points((m+1):(m+10), col="blue", (lambda*spent.test +1)^(1/lambda))
+lines((m+1):(m+10), 
       (lambda*mypred$pred + 1.96*mypred$se+1)^(1/lambda), lty=2)
-lines((length(spending_data$DefenseBudget) +1):(length(spending_data$DefenseBudget)+10), 
+lines((m+1):(m+10), 
       (lambda*mypred$pred - 1.96*mypred$se+1)^(1/lambda), lty=2)
 ```
 
