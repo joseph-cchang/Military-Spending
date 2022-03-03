@@ -7,7 +7,7 @@ output: pdf_document
 
 ```{r setup, include=FALSE, echo = FALSE}
 # set global chunk options: images will be 7x5 inches
-knitr::opts_chunk$set(fig.width=7, fig.height=5, echo =TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.width=7, fig.height=5, echo =TRUE)
 options(digits = 4)
 
 # library functions
@@ -184,6 +184,16 @@ abline(h=mean(res), col = "blue")
 par(mfrow=c(1,2))
 acf(res, main = "Autocorrelation")
 pacf(res, main = "Partial Autocorrelation")
+# ACF and PACF show lag 9 to be outside confidence interval. Therefore, the residuals follow either a AR(9), MA(9), or ARMA(9,9) model.
+
+# AR (9)
+fit1 <-arima(spent.train, order=c(9,1,0), fixed=c(0,0,0, NA,NA))
+
+# MA (9)
+fit2 <-arima(spent.train, order=c(0,1,9), fixed=c(0,0,0, NA,NA))
+
+# ARMA(9,9)
+fit3 <-arima(spent.train, order=c(9,1,9), fixed=c(0,0,0, NA,NA))
 
 # Testing for independence of residuals
 # lag 8 is chosen since sqrt 61 is around 8
