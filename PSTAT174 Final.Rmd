@@ -20,6 +20,7 @@ library(tsdl)
 library(forecast)
 library(astsa)
 library(qpcR)
+
 ```
 
 # Project description 
@@ -172,6 +173,8 @@ fit2 <- arima(spent.train, order = c(1,1,0),
              method = "ML")
 fit2
 
+source("plot.roots.R")
+plot.roots(NULL,polyroot(c(1, -0.3353, 0, -0.1612)), main="(A) roots of ma part, nonseasonal ")
 ```
 
 ## Model Diagnostics
