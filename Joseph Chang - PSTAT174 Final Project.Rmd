@@ -5,9 +5,12 @@ date: "March 11th, 20222"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, echo = FALSE}
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5, echo =TRUE)
+options(digits = 4)
+
 # library functions
-knitr::opts_chunk$set(echo = TRUE)
 library(knitr)
 library(tidyverse) 
 library(ISLR) 
@@ -20,16 +23,7 @@ library(tsdl)
 library(forecast)
 library(astsa)
 library(qpcR)
-
 ```
-
-# Project description 
-The data set I plan to use is the US military expense since 1960. This is money that the US military has used for the defense budget. Although the dataset has two other columns with population of U.S. and GDP, I think the defense budget is more interesting. The GDP and population follow a constant, linear relationship.
-
-# Project motivations and objectives
-This data is interesting to me because I have been studying history, especially US history and the wars it has fought or participated in. This data gives me an idea how much the US government spent during the wars and also in the present day. I plan to address the prediction of the defense budget in the next few years (forecasting).
-
-There seems to be a trend that is positive but there is no seasonality and no apparent sharp change in behavior.
 
 ## Data Importation
 ```{r}
@@ -43,14 +37,17 @@ plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in
 # plot time series
 plot.ts(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
 
+# Immediate observations: There seems to be a linear trend that is positive but there is no seasonality and no apparent sharp change in behavior.
+
+hist(spending_data$DefenseBudget)
 ```
 
-# transformation
+# Transformation
 ```{r}
-# Box-Cox transformation:
-t = 1:length(spending_data$DefenseBudget)
-fit = lm(spending_data$DefenseBudget~t)
-bcTransform = boxcox(spending_data$DefenseBudget ~ t, plotit=TRUE)
+# Since original data is skewed I will try Box-Cox transformation
+t <- 1:length(spending_data$DefenseBudget)
+fit <- lm(spending_data$DefenseBudget~t)
+bcTransform <- boxcox(spending_data$DefenseBudget ~ t, plotit=TRUE)
 
 # best lambda
 lambda = bcTransform$x[which(bcTransform$y == max(bcTransform$y))]
@@ -88,24 +85,20 @@ plot.ts(spending_data$DefenseBudget)
 length(spent)
 spent.train = spent[c(1:51)]
 spent.test  = spent[c(52:61)]
-
 ```
 
 ## Differencing
 ```{r}
-# difference once and plot
+# difference once and plot time series
 dat <- diff(spent.train, 1)
-dat
 plot.ts(dat, type= "l")
 
-# twice differenced and plot
+# twice differenced and plot time series
 dat.2 <- diff(dat, 1)
-dat.2
 plot.ts(dat.2, type= "l")
 
 # three times differenced and plot
 dat.3 <- diff(dat.2,1)
-dat.3
 plot(dat.3, type= "l")
 
 # check variance
@@ -138,7 +131,6 @@ opar <- par(no.readonly = T)
 par(mfrow=c(2,1))
 acf(dat.2, lag.max=100, main="Sample acf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
 pacf(dat.2, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
-
 ```
 
 ## Model estimation
@@ -146,8 +138,6 @@ pacf(dat.2, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expres
 # Candidate models:
 df <- expand.grid(p=0:10, q=0:10) 
 df <- cbind(df, AICc=NA)
-
-# Initially, I found lowest AICc using parameters(9,1). However, the coefficient at MA(1) produced a -1.000 value meaning I may have overdifferenced. Therefore, I will revert back to differencing at d=1.
 
 # Compute AICc:
 for (i in 1:nrow(df)) {
@@ -157,30 +147,26 @@ for (i in 1:nrow(df)) {
   # print(df[i, ])
 }
 df[which.min(df$AICc), ]
-
-order(df$AICc)
 df[order(df$AICc),]
-# lowest AICc is using parameters (0, 8). However, this is still too large for lag.
-# using principle of parsimony and lowest AICC, I will consider the two best models which are (1,1) and (1,0) where p and q are respectively shown
+
+# using principle of parsimony and lowest AICC, I will consider the two best models which are (1,1) and (0,1) where p and q are respectively shown
 
 # Final model 1
-fit1 <- arima(spent.train, order = c(1,1,1), 
+fit1 <- arima(spent.train, order = c(1,2,1), 
              method = "ML")
 fit1
 
 # Final model 2
-fit2 <- arima(spent.train, order = c(1,1,0), 
+fit2 <- arima(spent.train, order = c(0,2,1), 
              method = "ML")
 fit2
 
-source("plot.roots.R")
-plot.roots(NULL,polyroot(c(1, -0.3353, 0, -0.1612)), main="(A) roots of ma part, nonseasonal ")
+#source("plot.roots.R")
+#plot.roots(NULL,polyroot(c(1, -0.3353, 0, -0.1612)), main="(A) roots of ma part, nonseasonal ")
 ```
 
-## Model Diagnostics
+## Model Diagnostics for model 1
 ```{r}
-
-# for fit1
 # residual plots
 res <- residuals(fit1)
 mean(res)
@@ -200,6 +186,7 @@ acf(res, main = "Autocorrelation")
 pacf(res, main = "Partial Autocorrelation")
 
 # Testing for independence of residuals
+# lag 8 is chosen since sqrt 61 is around 8
 Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 2)
 
 Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 2)
@@ -209,17 +196,21 @@ Box.test(res^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 # test for normality of residuals
 shapiro.test(res)
 
+# yule-walker test
+ar(res, aic=TRUE, order.max = NULL, method=c("yule-walker"))
+
 # Histogram and qq plot
 par(mfrow=c(1,2))
 hist(res, main= "Histogram")
 qqnorm(res)
 qqline(res, col = "blue")
 
+# Model 1 passes all tests but Mc-Leod Li test and residuals are normal
+```
 
-# residuals pass Box.test and residuals are normal
 
-
-# for fit2
+## Model Diagnostics for model 2
+```{r}
 # residual plots
 res2 <- residuals(fit2)
 mean(res2)
@@ -248,6 +239,9 @@ Box.test(res2^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 # test for normality of residuals
 shapiro.test(res2)
 
+# yule-walker test
+ar(res2, aic=TRUE, order.max = NULL, method=c("yule-walker"))
+
 # Histogram and qq plot
 par(mfrow=c(1,2))
 hist(res2, main= "Histogram")
@@ -256,11 +250,17 @@ qqline(res2, col = "blue")
 
 
 # residuals pass Box.test and residuals are normal
-fit1
+```
+
+```{r}
+# I will use fit2 as the final model
+fit2
 ```
 
 Final model should be 
-(1-0.8762B)(1-B)Xt = (1-0.375B)Zt, Zt ~ WN(0, 0.08775)
+(1-B^2)Xt = (1-0.49B)Zt, Zt ~ WN(0, 0.0927)
+
+
 
 ## Data Forecasting
 
@@ -268,8 +268,9 @@ Final model should be
 # Predict 10 future observations and plot
 par(mfrow=c(1,1))
 m <- length(spent.train)
-mypred <- predict(fit1, n.ahead=10)
-ts.plot(c(lambda*spent.train +1)^(1/lambda), xlim=c(1, length(lambda*spent.train)+10), ylim=c(100,1200) , xlab = "Years after 1960", ylab = "Billions of dollars")
+mypred <- predict(fit2, n.ahead=10)
+ts.plot(c(lambda*spent.train +1)^(1/lambda), xlim=c(1, length(lambda*spent.train)+10), ylim=c(100,1200) , xlab = "Years after 1960", ylab = "Billions of USD")
+
 points((m+1):(m+10), col="red", (lambda*mypred$pred +1)^(1/lambda))
 points((m+1):(m+10), col="blue", (lambda*spent.test +1)^(1/lambda))
 lines((m+1):(m+10), 
@@ -278,10 +279,5 @@ lines((m+1):(m+10),
       (lambda*mypred$pred - 1.96*mypred$se+1)^(1/lambda), lty=2)
 ```
 
-need validation... test and train 
-
-
-
-fit model, (for loop) using aICC, find 2 best models, do diagnostics ( boxtest,), bestmodel passes, forecasting
 
 
