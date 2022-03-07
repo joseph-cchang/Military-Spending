@@ -1,15 +1,20 @@
 ---
-title: "PSTAT174 Project"
+title: "PSTAT174 Final Project"
 author: "Joseph Chang"
-date: "March 11th, 20222"
-output: pdf_document
+date: "3/11/2022"
+output:
+  html_document:
+    code_folding: hide
+df_print: paged
 ---
 
 ```{r setup, include=FALSE, echo = FALSE}
 # set global chunk options: images will be 7x5 inches
-knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.width=7, fig.height=5, echo =TRUE)
+knitr::opts_chunk$set(fig.width=7, fig.height=5, echo =TRUE, message=FALSE, warning = FALSE)
 options(digits = 4)
+```
 
+```{r}
 # library functions
 library(knitr)
 library(tidyverse) 
@@ -29,7 +34,6 @@ library(qpcR)
 ```{r}
 # load data
 spending_data <- read.csv("/Users/josephchang/Desktop/MilitarySpending.csv.xls")
-spending_data
 
 # plot data
 plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
@@ -156,6 +160,11 @@ fit1 <- arima(spent.train, order = c(1,2,1),
              method = "ML")
 fit1
 
+new_fit1 <- arima(spent.train, order = c(1,1,1), 
+             method = "ML")
+new_fit1
+# From fit1, it seems that I may have overdifferenced so I will use d=1 in diagnotics
+
 # Final model 2
 fit2 <- arima(spent.train, order = c(0,2,1), 
              method = "ML")
@@ -168,7 +177,7 @@ fit2
 ## Model Diagnostics for model 1
 ```{r}
 # residual plots
-res <- residuals(fit1)
+res <- residuals(new_fit1)
 mean(res)
 var(res)
 
@@ -176,7 +185,7 @@ var(res)
 par(mfrow=c(1,1))
 ts.plot(res, main  = "Fitted Residuals")
 t <- 1:length(res)
-fit1.res = lm(res~t)
+new_fit1.res = lm(res~t)
 abline(fit1.res)
 abline(h=mean(res), col = "blue")
 
@@ -187,13 +196,15 @@ pacf(res, main = "Partial Autocorrelation")
 # ACF and PACF show lag 9 to be outside confidence interval. Therefore, the residuals follow either a AR(9), MA(9), or ARMA(9,9) model.
 
 # AR (9)
-# fit1 <-arima(spent.train, order=c(9,1,0), seasonal=list(order=c(0,0,0), period=0),fixed=c(0,0,NA,NA,NA))
+first_fit <- arima(spent.train, order=c(9,1,0), fixed=c(0,0,0,0,0,0,0,0, NA))
 
 # MA (9)
-# fit2 <-arima(spent.train, order=c(0,1,9), fixed=c(0,0,0, NA,NA))
+second_fit <- arima(spent.train, order=c(0,1,9), fixed=c(0,0,0,0,0,0,0,0,NA))
 
 # ARMA(9,9)
-# fit3 <-arima(spent.train, order=c(9,1,9), fixed=c(0,0,0, NA,NA))
+third_fit <- arima(spent.train, order=c(9,1,9), fixed=c(0,0,0,0,0,0,0,0,NA, 0,0,0,0,0,0,0,0,NA))
+
+# From the three models, ARMA(9,9) produced the smallest AICc
 
 # Testing for independence of residuals
 # lag 8 is chosen since sqrt 61 is around 8
@@ -215,7 +226,7 @@ hist(res, main= "Histogram")
 qqnorm(res)
 qqline(res, col = "blue")
 
-# Model 1 passes all tests but Mc-Leod Li test and residuals are normal
+# Model 1 passes all tests and residuals are normal
 ```
 
 
@@ -238,6 +249,19 @@ abline(h=mean(res2), col = "blue")
 par(mfrow=c(1,2))
 acf(res2, main = "Autocorrelation")
 pacf(res2, main = "Partial Autocorrelation")
+
+# ACF and PACF show lag 9 to be outside confidence interval. Therefore, the residuals follow either a AR(9), MA(9), or ARMA(9,9) model.
+
+# AR (9)
+fit_1 <- arima(spent.train, order=c(9,2,0), fixed=c(0,0,0,0,0,0,0,0, NA))
+
+# MA (9)
+fit_2 <- arima(spent.train, order=c(0,2,9), fixed=c(0,0,0,0,0,0,0,0,NA))
+
+# ARMA(9,9)
+fit_3 <- arima(spent.train, order=c(9,2,9), fixed=c(0,0,0,0,0,0,0,0,NA, 0,0,0,0,0,0,0,0,NA))
+
+# From the three models, AR(9) produced the smallest AICc
 
 # Testing for independence of residuals
 Box.test(res2, lag = 8, type = c("Box-Pierce"), fitdf = 1)
@@ -264,7 +288,7 @@ qqline(res2, col = "blue")
 
 ```{r}
 # I will use fit2 as the final model
-fit2
+fit_1
 ```
 
 Final model should be 
@@ -278,7 +302,7 @@ Final model should be
 # Predict 10 future observations and plot
 par(mfrow=c(1,1))
 m <- length(spent.train)
-mypred <- predict(fit2, n.ahead=10)
+mypred <- predict(fit_1, n.ahead=10)
 ts.plot(c(lambda*spent.train +1)^(1/lambda), xlim=c(1, length(lambda*spent.train)+10), ylim=c(100,1200) , xlab = "Years after 1960", ylab = "Billions of USD")
 
 points((m+1):(m+10), col="red", (lambda*mypred$pred +1)^(1/lambda))
