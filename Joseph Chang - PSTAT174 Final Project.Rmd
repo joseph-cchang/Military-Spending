@@ -187,13 +187,13 @@ pacf(res, main = "Partial Autocorrelation")
 # ACF and PACF show lag 9 to be outside confidence interval. Therefore, the residuals follow either a AR(9), MA(9), or ARMA(9,9) model.
 
 # AR (9)
-fit1 <-arima(spent.train, order=c(9,1,0), fixed=c(0,0,0, NA,NA))
+# fit1 <-arima(spent.train, order=c(9,1,0), seasonal=list(order=c(0,0,0), period=0),fixed=c(0,0,NA,NA,NA))
 
 # MA (9)
-fit2 <-arima(spent.train, order=c(0,1,9), fixed=c(0,0,0, NA,NA))
+# fit2 <-arima(spent.train, order=c(0,1,9), fixed=c(0,0,0, NA,NA))
 
 # ARMA(9,9)
-fit3 <-arima(spent.train, order=c(9,1,9), fixed=c(0,0,0, NA,NA))
+# fit3 <-arima(spent.train, order=c(9,1,9), fixed=c(0,0,0, NA,NA))
 
 # Testing for independence of residuals
 # lag 8 is chosen since sqrt 61 is around 8
