@@ -123,14 +123,12 @@ pacf(dat.2, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expres
 
 ## Model Estimation
 
-Here, I will estimate coefficients of p and q. I 
+Here, I will estimate coefficients of p and q. I used a for loop function to find the lowest AICc. This for loop will produce candidate models for me to run diagnostics on. 
 
 ```{r}
-# Candidate models:
 df <- expand.grid(p=0:10, q=0:10) 
 df <- cbind(df, AICc=NA)
 
-# Compute AICc:
 for (i in 1:nrow(df)) {
   sarima.obj <- NULL
   try(arima.obj <- arima(spent.train, order=c(df$p[i],2, df$q[i]), method="ML"))
@@ -140,22 +138,14 @@ for (i in 1:nrow(df)) {
 df[which.min(df$AICc), ]
 df[order(df$AICc),]
 
-# using principle of parsimony and lowest AICC, I will consider the two best models which are (1,1) and (0,1) where p and q are respectively shown
-
 # Final model 1
-fit1 <- arima(spent.train, order = c(1,2,1), 
-             method = "ML")
+fit1 <- arima(spent.train, order = c(1,2,1), method = "ML")
 fit1
-
-new_fit1 <- arima(spent.train, order = c(1,1,1), 
-             method = "ML")
+new_fit1 <- arima(spent.train, order = c(1,1,1), method = "ML")
 new_fit1
 
-# From fit1, it seems that I may have overdifferenced so I will use d=1 in diagnotics
-
 # Final model 2
-fit2 <- arima(spent.train, order = c(0,2,1), 
-             method = "ML")
+fit2 <- arima(spent.train, order = c(0,2,1), method = "ML")
 fit2
 
 #source("plot.roots.R")
@@ -163,7 +153,12 @@ fit2
 #plot.roots(NULL,polyroot(c(1, -0.3353, 0, -0.1612)), main="(A) roots of ma part, nonseasonal ")
 ```
 
+Using principle of parsimony and the lowest AICC, I will consider the two best models which are (1,1) and (0,1) where p and q are respectively shown. In model 1, I found the MA coefficient to be -1, which meant I may have overdifferenced. As a result, I will revert back to differencing only once. This new model will be called new_fit1. Model 1 will use order at (1,1,1) and model 2 will use order at (0,2,1) with new_fit1 and fit2 named respectively.
+
 ## Model Diagnostics for model 1
+
+This will be model diagnostics for model 1: order = (1,1,1)
+
 ```{r}
 # residual plots
 res <- residuals(new_fit1)
@@ -220,6 +215,9 @@ qqline(res, col = "blue")
 
 
 ## Model Diagnostics for model 2
+
+This will be model diagnostics for model 1: order = (0,2,1)
+
 ```{r}
 # residual plots
 res2 <- residuals(fit2)
