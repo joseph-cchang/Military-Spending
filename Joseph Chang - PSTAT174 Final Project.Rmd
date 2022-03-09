@@ -30,6 +30,9 @@ library(astsa)
 library(qpcR)
 ```
 
+## Executive Summary
+
+
 ## Introduction
 
 The data set I plan to use is the United States military defense budget since 1960. This is essentially money the US military has used or uses for its own defense and protecting its citizens against other countries/people. Although the dataset has two other columns dedicated for population of the U.S. and GDP for each respective year, I find the defense budget column most interesting because it matches closely with the history of the United States and the wars it has participated in. Additionally, GDP and population followed a constant, linear relationship, so it was easy to predict and not as suitable for a detailed time series project.
@@ -50,6 +53,16 @@ plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in
 plot.ts(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
 
 hist(spending_data$DefenseBudget, label=TRUE, main = "Histogram of US Defense Budget", breaks="Sturges", xlab = "Defense Budget (in US billion)")
+```
+
+## Testing and training for the original data
+
+I created training and testing sets for spending_data$DefenseBudget, with the last 10 datapoints as the testing set. 
+
+```{r}
+# Define training and testing sets
+training = spending_data$DefenseBudget[c(1:51)]
+testing  = spending_data$DefenseBudget[c(52:61)]
 ```
 
 Immediate observations: There seems to be a linear trend that is positive but there is no seasonality and no apparent sharp change in behavior. There is non-constant variance and mean. The histogram seems to be skewed right
@@ -92,22 +105,12 @@ hist(spending_data$DefenseBudget, col = "light blue", main = "Histogram of Origi
 
 Based from the histogram, the spent dataset looked more symmetric while the original still looked skewed right. Variance also looked more stable in the transformation. As a result, the spent data looks more appropriate to use.
 
-## Testing and training for spent
-
-I created training and testing sets for spent, with the last 10 datapoints as the testing set.
-
-```{r}
-# Define training and testing sets
-spent.train = spent[c(1:51)]
-spent.test  = spent[c(52:61)]
-```
-
 ## Differencing
 
 Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times. As I increased difference each time, I plotted its time series for comparison. diff at lag 1
 
 ```{r}
-dat <- diff(spent.train, 1)
+dat <- diff(training, 1)
 plot.ts(dat, type= "l")
 dat.2 <- diff(dat, 1)
 plot.ts(dat.2, type= "l")
@@ -118,7 +121,7 @@ plot(dat.3, type= "l")
 Furthermore, I checked the variance for the 3 differences. I found that when differencing twice, the minimum variance was found. At difference 3, the variance increased, so differencing at 2 is most appropriate.
 
 ```{r}
-var(spent.train)
+var(training)
 var(dat)
 var(dat.2)
 var(dat.3)
@@ -128,13 +131,13 @@ Since I will difference at 2, I will check the plot for dat.2, which looks somew
 
 ## Model Identification
 
-For comparison, I plotted ACF and PACF for the training set of spent, spent when differenced once, and spent when differenced twice. I will compare histograms of the spent.train, dat, dat.2.
+For comparison, I plotted ACF and PACF for the training set of spent, spent when differenced once, and spent when differenced twice. I will compare histograms of the training, dat, dat.2.
 
 ```{r}
 opar <- par(no.readonly = T)
 par(mfrow=c(2,1))
-acf(spent.train, lag.max=100)
-pacf(spent.train, lag.max=100)
+acf(training, lag.max=100)
+pacf(training, lag.max=100)
 par(opar)
 
 opar <- par(no.readonly = T)
@@ -150,10 +153,10 @@ acf(dat.2, lag.max=100, main="Sample acf", ylim=c(-1,1),xlab="h", ylab= expressi
 pacf(dat.2, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
 ```
 
-At dat.2, I noticed that lag 9 was the furthest-most lag outside of confidence interval for ACF. The same could be said for PACF.
+At dat.2, I noticed that lag 9 was the furthest-most lag outside of confidence interval for ACF. Lag 1 is also outside. The same could be said for PACF, with lags 1 and 9 outside confidence interval
 
 ```{r}
-hist(spent.train, col = "light blue", xlab = "", main = "Histogram of data")
+hist(training, col = "light blue", xlab = "", main = "Histogram of data")
 hist(dat, col = "light blue", xlab = "", main = "Histogram of data differenced once")
 hist(dat.2, col = "light blue", xlab = "", main = "Histogram of data differenced twice")
 ```
@@ -170,7 +173,7 @@ df <- cbind(df, AICc=NA)
 
 for (i in 1:nrow(df)) {
   sarima.obj <- NULL
-  try(arima.obj <- arima(spent.train, order=c(df$p[i],1, df$q[i]), method="ML"))
+  try(arima.obj <- arima(training, order=c(df$p[i],2, df$q[i]), method="ML"))
   if (!is.null(arima.obj)) { df$AICc[i] <- AICc(arima.obj) }
   # print(df[i, ])
 }
@@ -185,18 +188,22 @@ Using principle of parsimony and the lowest AICC, I will consider the two best m
 
 ```{r}
 # Final model 1
-fit1 <- arima(spent.train, order = c(1,2,1), method = "ML")
-fit1
-AICc(fit1)
+fit2 <- arima(training, order = c(0,2,1), method = "ML")
+fit2
+AICc(fit2)
 
-new_fit1 <- arima(spent.train, order = c(1,1,0), seasonal = list (order = c(1,0,0), period = 9), method = "ML")
+new_fit1 <- arima(training, order = c(0,2,1), seasonal = list (order = c(1,0,0), period = 9), method = "ML")
 new_fit1
 AICc(new_fit1)
+
+new_fit2 <- arima(training,order = c(4,2,2), seasonal = list (order = c(1,0,0), period = 9), method = "ML")
+new_fit2
+AICc(new_fit2)
 # rerun the for loop
 # stationary because less than abs 1, and all AR are invertible
 
 # Final model 2
-fit2 <- arima(spent.train, order = c(1,1,1), method = "ML")
+fit2 <- arima(training, order = c(1,1,1), method = "ML")
 fit2
 AICc(fit2)
 # stationary because less than abs 1, and all AR are invertible
@@ -230,8 +237,8 @@ abline(new_fit1.res)
 abline(h=mean(res), col = "blue")
 
 # Testing independence
-Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 2)
-Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 2)
+Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 1)
+Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 1)
 Box.test(res^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 
 # test for normality of residuals
@@ -244,7 +251,7 @@ qqnorm(res)
 qqline(res, col = "blue")
 ```
 
-Model 1 passes all tests and residuals are normal. ACF of residuals\^2 shows nonlinear dependence
+Model 1 passes all tests and residuals are normal. ACF of residuals^2 shows nonlinear dependence
 
 ```{r}
 # ACF and PACF of residuals
@@ -359,17 +366,17 @@ Final model should be $(1-B)(1-0.84B)(1+0.570B^9)X_t = Z_t, Z_t ~ WN(0, 0.0625)$
 
 ## Data Forecasting
 
-In the final step of forecasting, I will predict 10 future observations (colored in red) and plot it against the testing set of spent (colored in blue) for comparison.
+In the final step of forecasting, I will predict 10 future observations (colored in red) and plot it against the testing set of the original data (colored in blue) for comparison.
 
 ```{r}
 # Predict 10 future observations and plot
 par(mfrow=c(1,1))
-m <- length(spent.train)
+m <- length(training)
 mypred <- predict(new_fit1, n.ahead=10)
-ts.plot(c(lambda*spent.train +1)^(1/lambda), xlim=c(1, length(lambda*spent.train)+10), ylim=c(100,1200) , xlab = "Years after 1960", ylab = "Billions of USD")
+ts.plot(c(lambda*training +1)^(1/lambda), xlim=c(1, length(lambda*training)+10), ylim=c(100,1200) , xlab = "Years after 1960", ylab = "Billions of USD")
 
 points((m+1):(m+10), col="red", (lambda*mypred$pred +1)^(1/lambda))
-points((m+1):(m+10), col="blue", (lambda*spent.test +1)^(1/lambda))
+points((m+1):(m+10), col="blue", (lambda*testing +1)^(1/lambda))
 lines((m+1):(m+10), 
       (lambda*mypred$pred + 1.96*mypred$se+1)^(1/lambda), lty=2)
 lines((m+1):(m+10), 
