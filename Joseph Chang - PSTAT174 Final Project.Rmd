@@ -32,7 +32,7 @@ library(qpcR)
 
 ## Data Importation
 
-First, I read in the data and plotted a time series model for it. Additionally, I created a histogram to visualize the Defense Budget
+First, I read in the data and plotted a time series model for the Defense Budget each of those years. Additionally, I created a histogram to visualize the Defense Budget.
 
 ```{r}
 spending_data <- read.csv("/Users/josephchang/Desktop/MilitarySpending.csv.xls")
@@ -49,16 +49,19 @@ Immediate observations: There seems to be a linear trend that is positive but th
 
 # Transformation
 
-Next, since the original data looked skewed, I will make any necessary transformations to make the model stationary and stabilize variance. I used Box-Cox transformation and the BcTransform command gave value of lambda around 0.30. Then I created a new transformed data called spent using the best lambda. For comparison, I created log and square root transformations as well. In order to determine which model to use, I created histograms of the original model vs the spent. As a result, the spent data looked to be more appropriate. 
+Next, since the original data looked skewed, I will make any necessary transformations to make the model stationary and stabilize the variance.
 
 ```{r}
 t <- 1:length(spending_data$DefenseBudget)
 fit <- lm(spending_data$DefenseBudget~t)
 bcTransform <- boxcox(spending_data$DefenseBudget ~ t, plotit=TRUE)
-
 lambda = bcTransform$x[which(bcTransform$y == max(bcTransform$y))]
 spent = (1/lambda)*(spending_data$DefenseBudget^lambda-1)
+```
 
+Using the Box-Cox transformation, the BcTransform command gave me the value of lambda to be around 0.30. Then I named the new transformed data using the lambda value called spent.
+
+```{r}
 # comparison of best lambda vs log/sqrt transformation
 spending_data.log = log(spending_data$DefenseBudget)
 spending_data.sqrt = log(spending_data$DefenseBudget)
@@ -69,19 +72,26 @@ ts.plot(spending_data$DefenseBudget, main = "Original Time Series")
 ts.plot(spent, main = "Box-cox Transform")
 ts.plot(spending_data.log, main = "Log transform")
 ts.plot(spending_data.sqrt, main = "Square root transform")
-
-hist(spent)
-hist(spending_data$DefenseBudget)
 ```
 
-Based from the histogram, the spent dataset looked more symmetric and even variance while the original still looked skewed. Variance also looked more stable after transformation. Thus, I will use spent.  
+For comparison, I created log and square root transformations as well. In order to determine which model to use, I will create histograms of the original model vs the transformed model (spent). 
+
+```{r}
+# histogram of original vs transformed
+op=par(mfrow=c(1,2))
+hist(spent, col = "light blue", main = "Histogram of Transformed Data")
+hist(spending_data$DefenseBudget, col = "light blue", main = "Histogram of Original Data")
+```
+
+Based from the histogram, the spent dataset looked more symmetric while the original still looked skewed right. Variance also looked more stable in the  transformation. As a result, the spent data looks more appropriate to use.
+
 
 ## Testing and training for spent
 
 I created training and testing sets for spent, with the last 10 datapoints as the testing set.
 
 ```{r}
-length(spent)
+# Define training and testing sets
 spent.train = spent[c(1:51)]
 spent.test  = spent[c(52:61)]
 ```
@@ -89,7 +99,7 @@ spent.test  = spent[c(52:61)]
 
 ## Differencing
 
-Then, I want to check if spent needs any differencing. I wanted to check the first 3 differences for spent. As I increased difference by 1 each time on the training set for spent, I plotted its time series for comparison. Furthermore, I checked the variance for the 3 differences, and found at difference 2, the minimum variance was found. At difference 3, the variance increased, meaning taking difference at 2 was the most appropriate.
+Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times. As I increased difference each time, I plotted its time series for comparison. 
 
 ```{r}
 dat <- diff(spent.train, 1)
@@ -98,17 +108,23 @@ dat.2 <- diff(dat, 1)
 plot.ts(dat.2, type= "l")
 dat.3 <- diff(dat.2,1)
 plot(dat.3, type= "l")
+```
 
+Furthermore, I checked the variance for the 3 differences. I found that when differencing twice, the minimum variance was found. At difference 3, the variance increased, so differencing at 2 is most appropriate.
+
+```{r}
 var(spent.train)
 var(dat)
 var(dat.2)
 var(dat.3)
 ```
-From the plot for differencing at 2, the model looks stationary.
+
+Since I will difference at 2, I will check the plot for dat.2, which looks somewhat stationary.
 
 ## Model Identification
 
-For comparison, I plotted ACF/PACF for training set of spent, the differencing of spent once, and the differencing of spent twice. I compared histograms of the transformed data, the transformed data differenced once, and transformed data differenced twice. 
+For comparison, I plotted ACF and PACF for the training set of spent, spent when differenced once, and spent when differenced twice. I will compare histograms of the spent.train, dat, dat.2.
+
 
 ```{r}
 opar <- par(no.readonly = T)
@@ -126,15 +142,17 @@ opar <- par(no.readonly = T)
 par(mfrow=c(2,1))
 acf(dat.2, lag.max=100, main="Sample acf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
 pacf(dat.2, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
-
-
-hist(spent.train, col = "light blue", xlab = "", main = "histogram of data")
-hist(dat, col = "light blue", xlab = "", main = "histogram of data differenced once")
-hist(dat.2, col = "light blue", xlab = "", main = "histogram of data differenced twice")
 ```
-At the differencing of spent twice, I noticed that lag 9 was the furthest-most lag outside of confidence interval for ACF. The same could be said for PACF.
 
-From the histogram, the transformed data seemed almost normal, its difference once looked more Gaussian and its difference twice looked skewed right.
+At dat.2, I noticed that lag 9 was the furthest-most lag outside of confidence interval for ACF. The same could be said for PACF.
+
+```{r}
+hist(spent.train, col = "light blue", xlab = "", main = "Histogram of data")
+hist(dat, col = "light blue", xlab = "", main = "Histogram of data differenced once")
+hist(dat.2, col = "light blue", xlab = "", main = "Histogram of data differenced twice")
+```
+
+From the histogram, the transformed data seemed almost normal. dat.1 looked more Gaussian and dat.2 looked skewed right.
 
 ## Model Estimation
 
@@ -150,9 +168,16 @@ for (i in 1:nrow(df)) {
   if (!is.null(arima.obj)) { df$AICc[i] <- AICc(arima.obj) }
   # print(df[i, ])
 }
+# this prints out the model with lowest AICc
 df[which.min(df$AICc), ]
-df[order(df$AICc),]
 
+# this prints all AICc values, starting from the lowest to highest
+df[order(df$AICc),]
+```
+
+Using principle of parsimony and the lowest AICC, I will consider the two best models which are (1,1) and (0,1) where p and q are respectively shown. In model 1, I found the MA coefficient to be -1, which meant I may have overdifferenced. As a result, I will revert back to differencing only once. This new model will be called new_fit1. Model 1 will use order at (1,1,1) and model 2 will use order at (0,2,1) called new_fit1 and fit2 respectively.
+
+```{r}
 # Final model 1
 fit1 <- arima(spent.train, order = c(1,2,1), method = "ML")
 fit1
@@ -169,20 +194,18 @@ AICc(fit2)
 
 
 # source("plot.roots.R")
-
 # look at gauchospace, specify the path
 #plot.roots(NULL,polyroot(c(1, -0.3353, 0, -0.1612)), main="(A) roots of ma part, nonseasonal ")
 ```
 
-Using principle of parsimony and the lowest AICC, I will consider the two best models which are (1,1) and (0,1) where p and q are respectively shown. In model 1, I found the MA coefficient to be -1, which meant I may have overdifferenced. As a result, I will revert back to differencing only once. This new model will be called new_fit1. Model 1 will use order at (1,1,1) and model 2 will use order at (0,2,1) with new_fit1 and fit2 named respectively. The AICc before overdifferencing was at 26.86, but after removing differencing once, the AICc 
-increased to 27.3. Meanwhile, Model 2 AICc was 26.86, which is lowest now.
+The AICc before overdifferencing was at 26.86, but after removing differencing once, the AICc increased to 27.3. Meanwhile, Model 2 AICc was 26.86, which is now lowest of the two candidate models.
 
 Model 1 is invertible because absolute value of coefficients for AR1 and MA1 are less than 1.
 Model 2 is stationary because it is purely MA. Model 2 is invertible because all roots are outside unit circle.
 
 ## Model Diagnostics for model 1
 
-This will be model diagnostics for model 1: order = (1,1,1).
+This will be model diagnostics for model 1: order = (1,1,1). For testing the independence of residuals, lag 8 is chosen because square root of observations (61) is around 8. 
 
 ```{r}
 # residual plots
@@ -198,12 +221,9 @@ new_fit1.res = lm(res~t)
 abline(fit1.res)
 abline(h=mean(res), col = "blue")
 
-# Testing for independence of residuals
-# lag 8 is chosen since sqrt 61 is around 8
+# Testing independence
 Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 3)
-
 Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 3)
-
 Box.test(res^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 
 # test for normality of residuals
@@ -214,34 +234,43 @@ par(mfrow=c(1,2))
 hist(res, main= "Histogram")
 qqnorm(res)
 qqline(res, col = "blue")
+```
 
-# ACF and PACF
+Model 1 passes all tests and residuals are normal. ACF of residuals^2 shows nonlinear dependence
+
+```{r}
+# ACF and PACF of residuals
 par(mfrow=c(1,2))
 acf(res, main = "Autocorrelation")
 pacf(res, main = "Partial Autocorrelation")
-# ACF and PACF show lag 9 to be outside confidence interval. Therefore, the residuals follow either a AR(9), MA(9), or ARMA(9,9) model.
+```
 
-# AR (9)
-first_fit <- arima(res, order=c(9,1,0), fixed=c(NA,0,0,0,0,0,0,NA,NA))
-acf(residuals(first_fit))
-pacf(residuals(first_fit))
+The ACF and PACF of residuals showed lag 9 to be outside confidence interval. Therefore, the residuals follow either a AR(9), MA(9), or ARMA(9,9) model.
 
-# MA (9)
-second_fit <- arima(res, order=c(0,1,9), fixed=c(NA,0,0,0,0,0,0,NA,NA), method="ML")
-acf(residuals(second_fit))
-pacf(residuals(second_fit))
+```{r}
+# # AR (9)
+# first_fit <- arima(res, order=c(9,1,0), fixed=c(NA,0,0,0,0,0,0,NA,NA))
+# acf(residuals(first_fit))
+# pacf(residuals(first_fit))
+# 
+# # MA (9)
+# second_fit <- arima(res, order=c(0,1,9), fixed=c(NA,0,0,0,0,0,0,NA,NA), method="ML")
+# acf(residuals(second_fit))
+# pacf(residuals(second_fit))
+# 
+# # ARMA(9,9)
+# third_fit <- arima(res, order=c(9,1,9), fixed=c(0,0,0,0,0,0,0,0,NA,NA,0,0,0,0,0,0,0,0,NA,NA))
+```
 
-# ARMA(9,9)
-third_fit <- arima(res, order=c(9,1,9), fixed=c(0,0,0,0,0,0,0,0,NA,NA,0,0,0,0,0,0,0,0,NA,NA))
+From the three models, AR(9) produced the smallest AICc.....
 
-# From the three models, AR(9) produced the smallest AICc
-
-# Model 1 passes all tests and residuals are normal. ACF of residuals^2 shows nonlinear dependence
-
+```{r}
 # yule-walker test
 ar(res, aic=TRUE, order.max = NULL, method=c("yule-walker"))
-# fitted residuals to AR(0), so it is white noise. This passes diagnostic checking
 ```
+
+The fitted residuals are to AR(0), so it is white noise. This passes diagnostic checking for model 1.
+
 
 
 ## Model Diagnostics for model 2
@@ -262,69 +291,79 @@ fit2.res2 = lm(res2~t)
 abline(fit2.res2)
 abline(h=mean(res2), col = "blue")
 
-# ACF and PACF
-par(mfrow=c(1,2))
-acf(res2, main = "Autocorrelation")
-pacf(res2, main = "Partial Autocorrelation")
-
-# ACF and PACF show lag 9 to be outside confidence interval. Therefore, the residuals follow either a AR(9), MA(9), or ARMA(9,9) model.
-
-# AR (9)
-fit_first <- arima(res2, order=c(9,2,0), fixed=c(0,0,0,0,0,0,0,NA,NA))
-acf(residuals(first_fit))
-pacf(residuals(first_fit))
-
-# MA (9)
-fit_second <- arima(res2, order=c(0,2,9), fixed=c(0,0,0,0,0,0,0,NA,NA), method="ML")
-acf(residuals(fit_second))
-pacf(residuals(fit_second))
-
-# ARMA(9,9)
-fit_3 <- arima(res2, order=c(9,2,9), fixed=c(0,0,0,0,0,0,0,0,NA, 0,0,0,0,0,0,0,0,NA))
-
-
-# From the three models, AR(9) produced the smallest AICc
-
 # Testing for independence of residuals
 Box.test(res2, lag = 8, type = c("Box-Pierce"), fitdf = 3)
-
 Box.test(res2, lag = 8, type = c("Ljung-Box"), fitdf = 3)
-
 Box.test(res2^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 
 # test for normality of residuals
 shapiro.test(res2)
-
-# yule-walker test
-ar(res2, aic=TRUE, order.max = NULL, method=c("yule-walker"))
 
 # Histogram and qq plot
 par(mfrow=c(1,2))
 hist(res2, main= "Histogram")
 qqnorm(res2)
 qqline(res2, col = "blue")
-
-
-# residuals pass Box.test and residuals are normal. ACF of residuals^2 shows nonlinear dependence
 ```
 
+Model 2 passes all tests and residuals are normal. ACF of residuals^2 shows nonlinear dependence
+
 ```{r}
-# I will use fit2 as the final model
-fit_1
+# ACF and PACF for residuals
+par(mfrow=c(1,2))
+acf(res2, main = "Autocorrelation")
+pacf(res2, main = "Partial Autocorrelation")
+```
+
+ACF and PACF showed lag 9 to be outside confidence interval. Therefore, the residuals follow either a AR(9), MA(9), or ARMA(9,9) model, just like model 1.
+
+```{r}
+# # AR (9)
+# fit_first <- arima(res2, order=c(9,2,0), fixed=c(0,0,0,0,0,0,0,NA,NA))
+# acf(residuals(first_fit))
+# pacf(residuals(first_fit))
+# 
+# # MA (9)
+# fit_second <- arima(res2, order=c(0,2,9), fixed=c(0,0,0,0,0,0,0,NA,NA), method="ML")
+# acf(residuals(fit_second))
+# pacf(residuals(fit_second))
+# 
+# # ARMA(9,9)
+# fit_3 <- arima(res2, order=c(9,2,9), fixed=c(0,0,0,0,0,0,0,0,NA, 0,0,0,0,0,0,0,0,NA))
+
+```
+
+From the three models, AR(9) produced the smallest AICc....
+
+```{r}
+# yule-walker test
+ar(res2, aic=TRUE, order.max = NULL, method=c("yule-walker"))
+```
+
+## Best model
+
+Anaylsis of residuals satisfactory??
+Since both model 1 and 2 passed diagnostic checking, I will use model 2 simply due to prinicple of parsimony. 
+
+```{r}
+fit2
+# $(1-B)^2(1.643B^9)Xt$ = Zt, Zt ~ WN(0, 0.255)
 ```
 
 Final model should be 
-(1-B)^2(1+0.643*B^9)Xt = Zt, Zt ~ WN(0, 0.255)
+$(1-B)^2Xt = (1-0.49)Zt$, Zt ~ WN(0, 0.0927)
 
 
 
 ## Data Forecasting
 
+In the final step of forecasting, I will predict 10 future observations (colored in red) and plot it against the testing set of spent (colored in blue) for comparison.
+
 ```{r}
 # Predict 10 future observations and plot
 par(mfrow=c(1,1))
 m <- length(spent.train)
-mypred <- predict(fit_1, n.ahead=10)
+mypred <- predict(fit2, n.ahead=10)
 ts.plot(c(lambda*spent.train +1)^(1/lambda), xlim=c(1, length(lambda*spent.train)+10), ylim=c(100,1200) , xlab = "Years after 1960", ylab = "Billions of USD")
 
 points((m+1):(m+10), col="red", (lambda*mypred$pred +1)^(1/lambda))
@@ -333,9 +372,20 @@ lines((m+1):(m+10),
       (lambda*mypred$pred + 1.96*mypred$se+1)^(1/lambda), lty=2)
 lines((m+1):(m+10), 
       (lambda*mypred$pred - 1.96*mypred$se+1)^(1/lambda), lty=2)
+
+# original data
+par(mfrow=c(2,1))
+plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
+# transformed data
+plot(spending_data$Year, spent, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
 ```
 
 ## Conclusion
+
 Model 1 and 2 both passed diagnostic checking but ..
+Ultimately, my predicted values followed a straight linear line that would have shown increased defense funding. But, the testing dataset pointed a curve instead. Individuals who helped me on the project include Sunpeng, Youhong, and Raisa Feldman.  
+
+## References
+I used this site to obtain my original dataset: https://www.kaggle.com/brandonconrady/us-military-spending-by-year-1960-2020/version/1
 
 
