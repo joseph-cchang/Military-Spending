@@ -215,7 +215,9 @@ fit2
 AICc(fit2)
 # stationary because less than abs 1, and all AR are invertible
 
-# see uc.check *unit circle
+#install.packages("unitcircle")
+#library(unitcircle)
+
 # source("plot.roots.R")
 # look at gauchospace, specify the path
 #plot.roots(NULL,polyroot(c(1, -0.3353, 0, -0.1612)), main="(A) roots of ma part, nonseasonal ")
