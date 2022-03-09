@@ -104,7 +104,7 @@ spent.test  = spent[c(52:61)]
 
 ## Differencing
 
-Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times. As I increased difference each time, I plotted its time series for comparison.
+Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times. As I increased difference each time, I plotted its time series for comparison. diff at lag 1
 
 ```{r}
 dat <- diff(spent.train, 1)
@@ -141,6 +141,8 @@ opar <- par(no.readonly = T)
 par(mfrow=c(2,1))
 acf(dat, lag.max = 100, main="Sample acf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
 pacf(dat, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
+# run ACF(9) and see if coefficient is 0
+# sarima (p=P=1)
 
 opar <- par(no.readonly = T)
 par(mfrow=c(2,1))
@@ -168,7 +170,7 @@ df <- cbind(df, AICc=NA)
 
 for (i in 1:nrow(df)) {
   sarima.obj <- NULL
-  try(arima.obj <- arima(spent.train, order=c(df$p[i],2, df$q[i]), method="ML"))
+  try(arima.obj <- arima(spent.train, order=c(df$p[i],1, df$q[i]), method="ML"))
   if (!is.null(arima.obj)) { df$AICc[i] <- AICc(arima.obj) }
   # print(df[i, ])
 }
@@ -187,16 +189,19 @@ fit1 <- arima(spent.train, order = c(1,2,1), method = "ML")
 fit1
 AICc(fit1)
 
-new_fit1 <- arima(spent.train, order = c(1,1,1), method = "ML")
+new_fit1 <- arima(spent.train, order = c(1,1,0), seasonal = list (order = c(1,0,0), period = 9), method = "ML")
 new_fit1
 AICc(new_fit1)
+# rerun the for loop
+# stationary because less than abs 1, and all AR are invertible
 
 # Final model 2
-fit2 <- arima(spent.train, order = c(0,2,1), method = "ML")
+fit2 <- arima(spent.train, order = c(1,1,1), method = "ML")
 fit2
 AICc(fit2)
+# stationary because less than abs 1, and all AR are invertible
 
-
+# see uc.check *unit circle
 # source("plot.roots.R")
 # look at gauchospace, specify the path
 #plot.roots(NULL,polyroot(c(1, -0.3353, 0, -0.1612)), main="(A) roots of ma part, nonseasonal ")
@@ -225,8 +230,8 @@ abline(new_fit1.res)
 abline(h=mean(res), col = "blue")
 
 # Testing independence
-Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 3)
-Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 3)
+Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 2)
+Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 2)
 Box.test(res^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 
 # test for normality of residuals
@@ -293,8 +298,8 @@ abline(fit2.res2)
 abline(h=mean(res2), col = "blue")
 
 # Testing for independence of residuals
-Box.test(res2, lag = 8, type = c("Box-Pierce"), fitdf = 3)
-Box.test(res2, lag = 8, type = c("Ljung-Box"), fitdf = 3)
+Box.test(res2, lag = 8, type = c("Box-Pierce"), fitdf = 2)
+Box.test(res2, lag = 8, type = c("Ljung-Box"), fitdf = 2)
 Box.test(res2^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 
 # test for normality of residuals
@@ -346,11 +351,11 @@ ar(res2, aic=TRUE, order.max = NULL, method=c("yule-walker"))
 Anaylsis of residuals satisfactory?? Since both model 1 and 2 passed diagnostic checking, I will use model 2 simply due to prinicple of parsimony.
 
 ```{r}
-fit2
+new_fit1
 # $(1-B)^2(1.643B^9)Xt$ = Zt, Zt ~ WN(0, 0.255)
 ```
 
-Final model should be (1-B)\^2Xt = (1-0.49)Zt, Zt \~ WN(0, 0.0927)
+Final model should be $(1-B)(1-0.84B)(1+0.570B^9)X_t = Z_t, Z_t ~ WN(0, 0.0625)$
 
 ## Data Forecasting
 
@@ -360,7 +365,7 @@ In the final step of forecasting, I will predict 10 future observations (colored
 # Predict 10 future observations and plot
 par(mfrow=c(1,1))
 m <- length(spent.train)
-mypred <- predict(fit2, n.ahead=10)
+mypred <- predict(new_fit1, n.ahead=10)
 ts.plot(c(lambda*spent.train +1)^(1/lambda), xlim=c(1, length(lambda*spent.train)+10), ylim=c(100,1200) , xlab = "Years after 1960", ylab = "Billions of USD")
 
 points((m+1):(m+10), col="red", (lambda*mypred$pred +1)^(1/lambda))
