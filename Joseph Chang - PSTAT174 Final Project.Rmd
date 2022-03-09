@@ -84,14 +84,14 @@ Using the Box-Cox transformation, the BcTransform command gave me the value of l
 ```{r}
 # comparison of best lambda vs log/sqrt transformation
 spending_data.log = log(spending_data$DefenseBudget)
-spending_data.sqrt = log(spending_data$DefenseBudget)
+spending_data.sqrt = sqrt(spending_data$DefenseBudget)
 
 # compare transforms on time series plot
 op=par(mfrow=c(2,2))
-ts.plot(spending_data$DefenseBudget, main = "Original Time Series")
-ts.plot(spent, main = "Box-cox Transform")
-ts.plot(spending_data.log, main = "Log transform")
-ts.plot(spending_data.sqrt, main = "Square root transform")
+plot.ts(spending_data$DefenseBudget, main = "Original Time Series")
+plot.ts(spent, main = "Box-cox Transform")
+plot.ts(spending_data.log, main = "Log transform")
+plot.ts(spending_data.sqrt, main = "Square root transform")
 ```
 
 For comparison, I created log and square root transformations as well. In order to determine which model to use, I will create histograms of the original model vs the transformed model (spent).
@@ -105,12 +105,19 @@ hist(spending_data$DefenseBudget, col = "light blue", main = "Histogram of Origi
 
 Based from the histogram, the spent dataset looked more symmetric while the original still looked skewed right. Variance also looked more stable in the transformation. As a result, the spent data looks more appropriate to use.
 
+```{r}
+# install.packages(c("ggplot2", "ggfortify"))
+# library(ggplot2)
+# library(ggfortify)
+# y <- ts(as.ts(training))
+```
+
 ## Differencing
 
-Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times. As I increased difference each time, I plotted its time series for comparison. diff at lag 1
+Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times. As I increased difference each time, I plotted its time series for comparison. I differenced at lag 1
 
 ```{r}
-dat <- diff(training, 1)
+dat <- diff(spent, 1)
 plot.ts(dat, type= "l")
 dat.2 <- diff(dat, 1)
 plot.ts(dat.2, type= "l")
@@ -121,7 +128,7 @@ plot(dat.3, type= "l")
 Furthermore, I checked the variance for the 3 differences. I found that when differencing twice, the minimum variance was found. At difference 3, the variance increased, so differencing at 2 is most appropriate.
 
 ```{r}
-var(training)
+var(spent)
 var(dat)
 var(dat.2)
 var(dat.3)
@@ -136,8 +143,8 @@ For comparison, I plotted ACF and PACF for the training set of spent, spent when
 ```{r}
 opar <- par(no.readonly = T)
 par(mfrow=c(2,1))
-acf(training, lag.max=100)
-pacf(training, lag.max=100)
+acf(spent, lag.max=100)
+pacf(spent, lag.max=100)
 par(opar)
 
 opar <- par(no.readonly = T)
@@ -153,10 +160,10 @@ acf(dat.2, lag.max=100, main="Sample acf", ylim=c(-1,1),xlab="h", ylab= expressi
 pacf(dat.2, lag.max=100, main="Sample pacf", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
 ```
 
-At dat.2, I noticed that lag 9 was the furthest-most lag outside of confidence interval for ACF. Lag 1 is also outside. The same could be said for PACF, with lags 1 and 9 outside confidence interval
+At dat.2, I noticed that for ACF, lag 9 was the furthest-most lag outside of confidence interval, and lag 1 is outside as well. For PACF, the same could be said, with lags 1 and 9 outside confidence interval
 
 ```{r}
-hist(training, col = "light blue", xlab = "", main = "Histogram of data")
+hist(training, col = "light blue", xlab = "", main = "Histogram of original data")
 hist(dat, col = "light blue", xlab = "", main = "Histogram of data differenced once")
 hist(dat.2, col = "light blue", xlab = "", main = "Histogram of data differenced twice")
 ```
@@ -396,3 +403,13 @@ Model 1 and 2 both passed diagnostic checking but .. Ultimately, my predicted va
 ## References
 
 I used this site to obtain my original dataset: <https://www.kaggle.com/brandonconrady/us-military-spending-by-year-1960-2020/version/1>
+
+## Appendix
+
+```{r get-labels, echo = FALSE}
+labs = knitr::all_labels()
+labs = setdiff(labs, c("setup", "get-labels"))
+```
+
+```{r all-code, ref.label=labs, eval=FALSE}
+```
