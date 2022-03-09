@@ -30,6 +30,14 @@ library(astsa)
 library(qpcR)
 ```
 
+## Introduction
+
+The data set I plan to use is the United States military defense budget since 1960. This is essentially money the US military has used or uses for its own defense and protecting its citizens against other countries/people. Although the dataset has two other columns dedicated for population of the U.S. and GDP for each respective year, I find the defense budget column most interesting because it matches closely with the history of the United States and the wars it has participated in. Additionally, GDP and population followed a constant, linear relationship, so it was easy to predict and not as suitable for a detailed time series project.
+
+This data is interesting to me because aside from studying statistics and data science, I have long been intrigued with history, especially US history and all the wars it has fought or participated in. This data provides me with an idea of how much the US government spent during the wars and also in the present day. For example, based from looking at the plot, I can infer that during the Vietnam War (1955-1975), the government consistently spent money to protect its own borders, and it wasn't until after 9/11 (2001) that the government began to intensify and exponentiate their spending in the years subsequently after and during the Iraq War. It wasn't until 2011 when Osama bin Laden's death led to the US to decrease their funding.
+
+I plan to split use the original dataset to transform into another dataset. Using this new updated dataset, I will split the data into training and testing. I will use the training dataset to predict and forecast the model and compare it with the testing dataset. In the end, I will compare the testing dataset with the original dataset to make conclusions
+
 ## Data Importation
 
 First, I read in the data and plotted a time series model for the Defense Budget each of those years. Additionally, I created a histogram to visualize the Defense Budget.
@@ -45,7 +53,6 @@ hist(spending_data$DefenseBudget, label=TRUE, main = "Histogram of US Defense Bu
 ```
 
 Immediate observations: There seems to be a linear trend that is positive but there is no seasonality and no apparent sharp change in behavior. There is non-constant variance and mean. The histogram seems to be skewed right
-
 
 # Transformation
 
@@ -74,7 +81,7 @@ ts.plot(spending_data.log, main = "Log transform")
 ts.plot(spending_data.sqrt, main = "Square root transform")
 ```
 
-For comparison, I created log and square root transformations as well. In order to determine which model to use, I will create histograms of the original model vs the transformed model (spent). 
+For comparison, I created log and square root transformations as well. In order to determine which model to use, I will create histograms of the original model vs the transformed model (spent).
 
 ```{r}
 # histogram of original vs transformed
@@ -83,8 +90,7 @@ hist(spent, col = "light blue", main = "Histogram of Transformed Data")
 hist(spending_data$DefenseBudget, col = "light blue", main = "Histogram of Original Data")
 ```
 
-Based from the histogram, the spent dataset looked more symmetric while the original still looked skewed right. Variance also looked more stable in the  transformation. As a result, the spent data looks more appropriate to use.
-
+Based from the histogram, the spent dataset looked more symmetric while the original still looked skewed right. Variance also looked more stable in the transformation. As a result, the spent data looks more appropriate to use.
 
 ## Testing and training for spent
 
@@ -96,10 +102,9 @@ spent.train = spent[c(1:51)]
 spent.test  = spent[c(52:61)]
 ```
 
-
 ## Differencing
 
-Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times. As I increased difference each time, I plotted its time series for comparison. 
+Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times. As I increased difference each time, I plotted its time series for comparison.
 
 ```{r}
 dat <- diff(spent.train, 1)
@@ -124,7 +129,6 @@ Since I will difference at 2, I will check the plot for dat.2, which looks somew
 ## Model Identification
 
 For comparison, I plotted ACF and PACF for the training set of spent, spent when differenced once, and spent when differenced twice. I will compare histograms of the spent.train, dat, dat.2.
-
 
 ```{r}
 opar <- par(no.readonly = T)
@@ -156,7 +160,7 @@ From the histogram, the transformed data seemed almost normal. dat.1 looked more
 
 ## Model Estimation
 
-Here, I will estimate coefficients of p and q. I used a for loop function to find the lowest AICc. This for loop will produce candidate models for me to run diagnostics on. 
+Here, I will estimate coefficients of p and q. I used a for loop function to find the lowest AICc. This for loop will produce candidate models for me to run diagnostics on.
 
 ```{r}
 df <- expand.grid(p=0:10, q=0:10) 
@@ -200,12 +204,11 @@ AICc(fit2)
 
 The AICc before overdifferencing was at 26.86, but after removing differencing once, the AICc increased to 27.3. Meanwhile, Model 2 AICc was 26.86, which is now lowest of the two candidate models.
 
-Model 1 is invertible because absolute value of coefficients for AR1 and MA1 are less than 1.
-Model 2 is stationary because it is purely MA. Model 2 is invertible because all roots are outside unit circle.
+Model 1 is invertible because absolute value of coefficients for AR1 and MA1 are less than 1. Model 2 is stationary because it is purely MA. Model 2 is invertible because all roots are outside unit circle.
 
 ## Model Diagnostics for model 1
 
-This will be model diagnostics for model 1: order = (1,1,1). For testing the independence of residuals, lag 8 is chosen because square root of observations (61) is around 8. 
+This will be model diagnostics for model 1: order = (1,1,1). For testing the independence of residuals, lag 8 is chosen because square root of observations (61) is around 8.
 
 ```{r}
 # residual plots
@@ -218,7 +221,7 @@ par(mfrow=c(1,1))
 ts.plot(res, main  = "Fitted Residuals")
 t <- 1:length(res)
 new_fit1.res = lm(res~t)
-abline(fit1.res)
+abline(new_fit1.res)
 abline(h=mean(res), col = "blue")
 
 # Testing independence
@@ -236,7 +239,7 @@ qqnorm(res)
 qqline(res, col = "blue")
 ```
 
-Model 1 passes all tests and residuals are normal. ACF of residuals^2 shows nonlinear dependence
+Model 1 passes all tests and residuals are normal. ACF of residuals\^2 shows nonlinear dependence
 
 ```{r}
 # ACF and PACF of residuals
@@ -271,8 +274,6 @@ ar(res, aic=TRUE, order.max = NULL, method=c("yule-walker"))
 
 The fitted residuals are to AR(0), so it is white noise. This passes diagnostic checking for model 1.
 
-
-
 ## Model Diagnostics for model 2
 
 This will be model diagnostics for model 1: order = (0,2,1)
@@ -306,7 +307,7 @@ qqnorm(res2)
 qqline(res2, col = "blue")
 ```
 
-Model 2 passes all tests and residuals are normal. ACF of residuals^2 shows nonlinear dependence
+Model 2 passes all tests and residuals are normal. ACF of residuals\^2 shows nonlinear dependence
 
 ```{r}
 # ACF and PACF for residuals
@@ -342,18 +343,14 @@ ar(res2, aic=TRUE, order.max = NULL, method=c("yule-walker"))
 
 ## Best model
 
-Anaylsis of residuals satisfactory??
-Since both model 1 and 2 passed diagnostic checking, I will use model 2 simply due to prinicple of parsimony. 
+Anaylsis of residuals satisfactory?? Since both model 1 and 2 passed diagnostic checking, I will use model 2 simply due to prinicple of parsimony.
 
 ```{r}
 fit2
 # $(1-B)^2(1.643B^9)Xt$ = Zt, Zt ~ WN(0, 0.255)
 ```
 
-Final model should be 
-$(1-B)^2Xt = (1-0.49)Zt$, Zt ~ WN(0, 0.0927)
-
-
+Final model should be (1-B)\^2Xt = (1-0.49)Zt, Zt \~ WN(0, 0.0927)
 
 ## Data Forecasting
 
@@ -382,10 +379,8 @@ plot(spending_data$Year, spent, ylab = "Defense budget (in US billion)", xlab = 
 
 ## Conclusion
 
-Model 1 and 2 both passed diagnostic checking but ..
-Ultimately, my predicted values followed a straight linear line that would have shown increased defense funding. But, the testing dataset pointed a curve instead. Individuals who helped me on the project include Sunpeng, Youhong, and Raisa Feldman.  
+Model 1 and 2 both passed diagnostic checking but .. Ultimately, my predicted values followed a straight linear line that would have shown increased defense funding. But, the testing dataset pointed a curve instead. Individuals who helped me on the project include Sunpeng, Youhong, and Raisa Feldman.
 
 ## References
-I used this site to obtain my original dataset: https://www.kaggle.com/brandonconrady/us-military-spending-by-year-1960-2020/version/1
 
-
+I used this site to obtain my original dataset: <https://www.kaggle.com/brandonconrady/us-military-spending-by-year-1960-2020/version/1>
