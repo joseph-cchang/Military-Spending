@@ -32,6 +32,7 @@ library(qpcR)
 
 ## Executive Summary
 
+on own page
 
 ## Introduction
 
@@ -52,7 +53,17 @@ plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in
 
 plot.ts(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
 
+plot.ts(spending_data$DefenseBudget)
+nt = length(spending_data$DefenseBudget)
+fit <- lm(spending_data$DefenseBudget ~ as.numeric(1:nt))
+abline(fit, col ="red")
+
+mean(spending_data$DefenseBudget)[1]
+abline(h=mean(spending_data$DefenseBudget), col="blue")
+
 hist(spending_data$DefenseBudget, label=TRUE, main = "Histogram of US Defense Budget", breaks="Sturges", xlab = "Defense Budget (in US billion)")
+
+
 ```
 
 ## Testing and training for the original data
@@ -63,7 +74,13 @@ I created training and testing sets for spending_data$DefenseBudget, with the la
 # Define training and testing sets
 training = spending_data$DefenseBudget[c(1:51)]
 testing  = spending_data$DefenseBudget[c(52:61)]
+
 plot.ts(training)
+fit <- lm(training ~ as.numeric(1:length(training)))
+abline(fit, col="red")
+abline(h=mean(training), col = "blue")
+hist(training, col = "light blue", main = "histogram of the original data - training")
+acf(training, lag.max = 100)
 ```
 
 Immediate observations: There seems to be a linear trend that is positive but there is no seasonality and no apparent sharp change in behavior. There is non-constant variance and mean. The histogram seems to be skewed right
@@ -106,22 +123,19 @@ hist(training, col = "light blue", main = "Histogram of trained Original Data")
 
 Based from the histogram, the spent dataset looked more symmetric while the original still looked skewed right. Variance also looked more stable in the transformation. As a result, the spent data looks more appropriate to use.
 
-```{r}
-# install.packages(c("ggplot2", "ggfortify"))
-# library(ggplot2)
-# library(ggfortify)
-# y <- ts(as.ts(training))
-```
-
 ## Differencing
 
 Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times. As I increased difference each time, I plotted its time series for comparison. I differenced at lag 1
 
 ```{r}
 dat <- diff(training, 1)
-plot.ts(dat, type= "l")
+plot.ts(dat, main = "training differenced once at lag 1", type= "l")
+fit <- lm(dat ~ as.numeric(1:length(dat)))
+abline(fit, col = "red")
+abline(h=mean(dat), col = "blue")
+
 dat.2 <- diff(dat, 1)
-plot.ts(dat.2, type= "l")
+plot.ts(dat.2, main = "", type= "l")
 dat.3 <- diff(dat.2,1)
 plot(dat.3, type= "l")
 ```
@@ -142,6 +156,8 @@ Since I will difference at 2, I will check the plot for dat.2, which looks somew
 For comparison, I plotted ACF and PACF for the training set of spent, spent when differenced once, and spent when differenced twice. I will compare histograms of the training, dat, dat.2.
 
 ```{r}
+#### why margins off?? ????? 
+
 opar <- par(no.readonly = T)
 par(mfrow=c(2,1))
 acf(training, lag.max=100)
@@ -167,6 +183,12 @@ At dat.2, I noticed that for ACF, lag 9 was the furthest-most lag outside of con
 hist(training, col = "light blue", xlab = "", main = "Histogram of original data")
 hist(dat, col = "light blue", xlab = "", main = "Histogram of data differenced once")
 hist(dat.2, col = "light blue", xlab = "", main = "Histogram of data differenced twice")
+
+
+hist(dat.2, density=20, breaks =20, col = "blue", prob=T)
+m <- mean(dat.2)
+std <- sqrt(var(dat.2))
+curve(dnorm(x,m,std), add = T)
 ```
 
 From the histogram, the original data seemed skewed right. dat.1 looked less skewed, but overall still skewed right. dat.2 looks somewhat Gaussian
@@ -220,12 +242,11 @@ fit3 <- arima(training, order = c(1,2,1), method = "ML")
 fit3
 AICc(fit3)
 
-#install.packages("unitcircle")
-#library(unitcircle)
 
-# source("plot.roots.R")
-# look at gauchospace, specify the path
-#plot.roots(NULL,polyroot(c(1, -0.3353, 0, -0.1612)), main="(A) roots of ma part, nonseasonal ")
+# install.packages("UnitCircle")
+# library(UnitCircle)
+# uc.check(pol_ = c(), plot_output = T)
+
 ```
 
 The AICc before overdifferencing was at 26.86, but after removing differencing once, the AICc increased to 27.3. Meanwhile, Model 2 AICc was 26.86, which is now lowest of the two candidate models.
@@ -409,10 +430,7 @@ lines((m+1):(m+10),
       (lambda*mypred$pred - 1.96*mypred$se+1)^(1/lambda), lty=2)
 
 # original data
-par(mfrow=c(2,1))
 plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
-# transformed data
-plot(training, spent, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
 ```
 
 ## Conclusion
