@@ -117,7 +117,7 @@ Based from the histogram, the spent dataset looked more symmetric while the orig
 Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times. As I increased difference each time, I plotted its time series for comparison. I differenced at lag 1
 
 ```{r}
-dat <- diff(spent, 1)
+dat <- diff(training, 1)
 plot.ts(dat, type= "l")
 dat.2 <- diff(dat, 1)
 plot.ts(dat.2, type= "l")
@@ -143,8 +143,8 @@ For comparison, I plotted ACF and PACF for the training set of spent, spent when
 ```{r}
 opar <- par(no.readonly = T)
 par(mfrow=c(2,1))
-acf(spent, lag.max=100)
-pacf(spent, lag.max=100)
+acf(training, lag.max=100)
+pacf(training, lag.max=100)
 par(opar)
 
 opar <- par(no.readonly = T)
@@ -168,7 +168,7 @@ hist(dat, col = "light blue", xlab = "", main = "Histogram of data differenced o
 hist(dat.2, col = "light blue", xlab = "", main = "Histogram of data differenced twice")
 ```
 
-From the histogram, the transformed data seemed almost normal. dat.1 looked more Gaussian and dat.2 looked skewed right.
+From the histogram, the original data seemed skewed right. dat.1 looked less skewed, but overall still skewed right. dat.2 looks somewhat Gaussian
 
 ## Model Estimation
 
@@ -191,13 +191,13 @@ df[which.min(df$AICc), ]
 df[order(df$AICc),]
 ```
 
-Using principle of parsimony and the lowest AICC, I will consider the two best models which are (1,1) and (0,1) where p and q are respectively shown. In model 1, I found the MA coefficient to be -1, which meant I may have overdifferenced. As a result, I will revert back to differencing only once. This new model will be called new_fit1. Model 1 will use order at (1,1,1) and model 2 will use order at (0,2,1) called new_fit1 and fit2 respectively.
+Using principle of parsimony and the lowest AICC, I will consider the two best models which are (0,1) and (4,2) where p and q are respectively shown. In model 1, I found the MA coefficient to be -1, which meant I may have overdifferenced. As a result, I will revert back to differencing only once. This new model will be called new_fit1. Model 1 will use order at (1,1,1) and model 2 will use order at (0,2,1) called new_fit1 and fit2 respectively.
 
 ```{r}
 # Final model 1
-fit2 <- arima(training, order = c(0,2,1), method = "ML")
-fit2
-AICc(fit2)
+fit1 <- arima(training, order = c(0,2,1), method = "ML")
+fit1
+AICc(fit1)
 
 new_fit1 <- arima(training, order = c(0,2,1), seasonal = list (order = c(1,0,0), period = 9), method = "ML")
 new_fit1
@@ -210,10 +210,14 @@ AICc(new_fit2)
 # stationary because less than abs 1, and all AR are invertible
 
 # Final model 2
-fit2 <- arima(training, order = c(1,1,1), method = "ML")
+fit2 <- arima(training, order = c(4,2,2), method = "ML")
 fit2
 AICc(fit2)
 # stationary because less than abs 1, and all AR are invertible
+
+fit3 <- arima(training, order = c(1,2,1), method = "ML")
+fit3
+AICc(fit3)
 
 #install.packages("unitcircle")
 #library(unitcircle)
@@ -246,9 +250,9 @@ abline(new_fit1.res)
 abline(h=mean(res), col = "blue")
 
 # Testing independence
-Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 1)
-Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 1)
-Box.test(res^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
+Box.test(res, lag = sqrt(61), type = c("Box-Pierce"), fitdf = 1)
+Box.test(res, lag = sqrt(61), type = c("Ljung-Box"), fitdf = 1)
+Box.test(res^2, lag = sqrt(61), type = c("Ljung-Box"), fitdf = 0)
 
 # test for normality of residuals
 shapiro.test(res)
@@ -382,7 +386,7 @@ In the final step of forecasting, I will predict 10 future observations (colored
 par(mfrow=c(1,1))
 m <- length(training)
 mypred <- predict(new_fit1, n.ahead=10)
-ts.plot(c(lambda*training +1)^(1/lambda), xlim=c(1, length(lambda*training)+10), ylim=c(100,1200) , xlab = "Years after 1960", ylab = "Billions of USD")
+ts.plot(c(lambda*training +1)^(1/lambda), xlim=c(1, length(lambda*training)+10), ylim=c(100,200000000) , xlab = "Years after 1960", ylab = "Billions of USD")
 
 points((m+1):(m+10), col="red", (lambda*mypred$pred +1)^(1/lambda))
 points((m+1):(m+10), col="blue", (lambda*testing +1)^(1/lambda))
