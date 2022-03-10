@@ -53,6 +53,7 @@ plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in
 
 plot.ts(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
 
+# added trend and mean
 plot.ts(spending_data$DefenseBudget)
 nt = length(spending_data$DefenseBudget)
 fit <- lm(spending_data$DefenseBudget ~ as.numeric(1:nt))
@@ -61,8 +62,8 @@ abline(fit, col ="red")
 mean(spending_data$DefenseBudget)[1]
 abline(h=mean(spending_data$DefenseBudget), col="blue")
 
-hist(spending_data$DefenseBudget, label=TRUE, main = "Histogram of US Defense Budget", breaks="Sturges", xlab = "Defense Budget (in US billion)")
-
+# histogram of all points in original data
+hist(spending_data$DefenseBudget, label=TRUE, main = "Histogram of U.S Defense Budget", breaks="Sturges", xlab = "Defense Budget (in US billion)")
 
 ```
 
@@ -75,12 +76,12 @@ I created training and testing sets for spending_data$DefenseBudget, with the la
 training = spending_data$DefenseBudget[c(1:51)]
 testing  = spending_data$DefenseBudget[c(52:61)]
 
+# time series plot in training
 plot.ts(training)
 fit <- lm(training ~ as.numeric(1:length(training)))
 abline(fit, col="red")
 abline(h=mean(training), col = "blue")
-hist(training, col = "light blue", main = "histogram of the original data - training")
-acf(training, lag.max = 100)
+
 ```
 
 Immediate observations: There seems to be a linear trend that is positive but there is no seasonality and no apparent sharp change in behavior. There is non-constant variance and mean. The histogram seems to be skewed right
@@ -158,6 +159,8 @@ For comparison, I plotted ACF and PACF for the training set of spent, spent when
 ```{r}
 #### why margins off?? ????? 
 
+# lag.max mean anything ????
+
 opar <- par(no.readonly = T)
 par(mfrow=c(2,1))
 acf(training, lag.max=100)
@@ -184,7 +187,7 @@ hist(training, col = "light blue", xlab = "", main = "Histogram of original data
 hist(dat, col = "light blue", xlab = "", main = "Histogram of data differenced once")
 hist(dat.2, col = "light blue", xlab = "", main = "Histogram of data differenced twice")
 
-
+#### what this mean  ?????
 hist(dat.2, density=20, breaks =20, col = "blue", prob=T)
 m <- mean(dat.2)
 std <- sqrt(var(dat.2))
@@ -233,7 +236,7 @@ AICc(new_fit2)
 # stationary because less than abs 1, and all AR are invertible
 
 # Final model 2
-fit2 <- arima(training, order = c(9,2,1), method = "ML")
+fit2 <- arima(training, order = c(4,2,2), method = "ML")
 fit2
 AICc(fit2)
 # stationary because less than abs 1, and all AR are invertible
@@ -297,20 +300,6 @@ pacf(res, main = "Partial Autocorrelation")
 
 The ACF and PACF of residuals showed lag 9 to be outside confidence interval. Therefore, the residuals follow either a AR(9), MA(9), or ARMA(9,9) model.
 
-```{r}
-# # AR (9)
-# first_fit <- arima(res, order=c(9,1,0), fixed=c(NA,0,0,0,0,0,0,NA,NA))
-# acf(residuals(first_fit))
-# pacf(residuals(first_fit))
-# 
-# # MA (9)
-# second_fit <- arima(res, order=c(0,1,9), fixed=c(NA,0,0,0,0,0,0,NA,NA), method="ML")
-# acf(residuals(second_fit))
-# pacf(residuals(second_fit))
-# 
-# # ARMA(9,9)
-# third_fit <- arima(res, order=c(9,1,9), fixed=c(0,0,0,0,0,0,0,0,NA,NA,0,0,0,0,0,0,0,0,NA,NA))
-```
 
 From the three models, AR(9) produced the smallest AICc.....
 
@@ -320,6 +309,13 @@ ar(res, aic=TRUE, order.max = NULL, method=c("yule-walker"))
 ```
 
 The fitted residuals are to AR(0), so it is white noise. This passes diagnostic checking for model 1.
+
+
+
+
+
+
+
 
 ## Model Diagnostics for model 2
 
@@ -388,16 +384,20 @@ From the three models, AR(9) produced the smallest AICc....
 ar(res2, aic=TRUE, order.max = NULL, method=c("yule-walker"))
 ```
 
+
+
+
+
 ## Best model
 
 Anaylsis of residuals satisfactory?? Since both model 1 and 2 passed diagnostic checking, I will use model 2 simply due to prinicple of parsimony.
 
 ```{r}
 new_fit1
-# $(1-B)^2(1.643B^9)Xt$ = Zt, Zt ~ WN(0, 0.255)
+# $(1-B)^2(1+0.541B^9)Xt$ = (1-0.45B)Zt, Zt ~ WN(0, 155)
 ```
 
-Final model should be $(1-B)(1-0.84B)(1+0.570B^9)X_t = Z_t, Z_t ~ WN(0, 0.0625)$
+Final model should be $(1-B)(1+0.541B^9)X_t = (1-0.45B)Z_t, Z_t ~ WN(0, 155)$
 
 ## Data Forecasting
 
