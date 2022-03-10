@@ -43,7 +43,7 @@ I plan to split use the original dataset to transform into another dataset. Usin
 
 ## Data Importation
 
-First, I read in the data and plotted a time series model for the Defense Budget each of those years. Additionally, I created a histogram to visualize the Defense Budget.
+First, I read in the data and plotted a time series model for the Defense Budget each of the years. Additionally, I created a histogram to visualize the Defense Budget.
 
 ```{r}
 spending_data <- read.csv("/Users/josephchang/Desktop/MilitarySpending.csv.xls")
@@ -57,12 +57,13 @@ hist(spending_data$DefenseBudget, label=TRUE, main = "Histogram of US Defense Bu
 
 ## Testing and training for the original data
 
-I created training and testing sets for spending_data$DefenseBudget, with the last 10 datapoints as the testing set. 
+I created training and testing sets for spending_data$DefenseBudget, with the last 6 datapoints as the testing set. I chose 6 datapoints because 10% of the observations is around 6.1.
 
 ```{r}
 # Define training and testing sets
 training = spending_data$DefenseBudget[c(1:51)]
 testing  = spending_data$DefenseBudget[c(52:61)]
+plot.ts(training)
 ```
 
 Immediate observations: There seems to be a linear trend that is positive but there is no seasonality and no apparent sharp change in behavior. There is non-constant variance and mean. The histogram seems to be skewed right
@@ -72,26 +73,26 @@ Immediate observations: There seems to be a linear trend that is positive but th
 Next, since the original data looked skewed, I will make any necessary transformations to make the model stationary and stabilize the variance.
 
 ```{r}
-t <- 1:length(spending_data$DefenseBudget)
-fit <- lm(spending_data$DefenseBudget~t)
-bcTransform <- boxcox(spending_data$DefenseBudget ~ t, plotit=TRUE)
+t <- 1:length(training)
+fit <- lm(training~t)
+bcTransform <- boxcox(training ~ t, plotit=TRUE)
 lambda = bcTransform$x[which(bcTransform$y == max(bcTransform$y))]
-spent = (1/lambda)*(spending_data$DefenseBudget^lambda-1)
+spent = (1/lambda)*(training^lambda-1)
 ```
 
-Using the Box-Cox transformation, the BcTransform command gave me the value of lambda to be around 0.30. Then I named the new transformed data using the lambda value called spent.
+Using the Box-Cox transformation, the BcTransform command gave me the value of lambda to be around 0.1414. Then I named the new transformed data using the lambda value called spent.
 
 ```{r}
 # comparison of best lambda vs log/sqrt transformation
-spending_data.log = log(spending_data$DefenseBudget)
-spending_data.sqrt = sqrt(spending_data$DefenseBudget)
+training.log = log(training)
+training.sqrt = sqrt(training)
 
 # compare transforms on time series plot
 op=par(mfrow=c(2,2))
-plot.ts(spending_data$DefenseBudget, main = "Original Time Series")
+plot.ts(training, main = "Original trained Time Series")
 plot.ts(spent, main = "Box-cox Transform")
-plot.ts(spending_data.log, main = "Log transform")
-plot.ts(spending_data.sqrt, main = "Square root transform")
+plot.ts(training.log, main = "Log transform")
+plot.ts(training.sqrt, main = "Square root transform")
 ```
 
 For comparison, I created log and square root transformations as well. In order to determine which model to use, I will create histograms of the original model vs the transformed model (spent).
@@ -100,7 +101,7 @@ For comparison, I created log and square root transformations as well. In order 
 # histogram of original vs transformed
 op=par(mfrow=c(1,2))
 hist(spent, col = "light blue", main = "Histogram of Transformed Data")
-hist(spending_data$DefenseBudget, col = "light blue", main = "Histogram of Original Data")
+hist(training, col = "light blue", main = "Histogram of trained Original Data")
 ```
 
 Based from the histogram, the spent dataset looked more symmetric while the original still looked skewed right. Variance also looked more stable in the transformation. As a result, the spent data looks more appropriate to use.
@@ -128,7 +129,7 @@ plot(dat.3, type= "l")
 Furthermore, I checked the variance for the 3 differences. I found that when differencing twice, the minimum variance was found. At difference 3, the variance increased, so differencing at 2 is most appropriate.
 
 ```{r}
-var(spent)
+var(training)
 var(dat)
 var(dat.2)
 var(dat.3)
@@ -210,7 +211,7 @@ AICc(new_fit2)
 # stationary because less than abs 1, and all AR are invertible
 
 # Final model 2
-fit2 <- arima(training, order = c(4,2,2), method = "ML")
+fit2 <- arima(training, order = c(9,2,1), method = "ML")
 fit2
 AICc(fit2)
 # stationary because less than abs 1, and all AR are invertible
@@ -382,7 +383,19 @@ Final model should be $(1-B)(1-0.84B)(1+0.570B^9)X_t = Z_t, Z_t ~ WN(0, 0.0625)$
 In the final step of forecasting, I will predict 10 future observations (colored in red) and plot it against the testing set of the original data (colored in blue) for comparison.
 
 ```{r}
-# Predict 10 future observations and plot
+# Predict 10 future observations on data and plot
+par(mfrow=c(1,1))
+m <- length(training)
+mypred <- predict(new_fit1, n.ahead=15)
+
+ts.plot(training, xlim=c(1, length(training)+15), ylim=c(min(training), max(mypred$pred +2*mypred$se)) , xlab = "Years after 1960", ylab = "Billions of USD")
+
+points((m+1):(m+15), col="red", mypred$pred)
+points((m+1):(m+10), col="blue", testing)
+lines((mypred$pred +2*mypred$se), col = "blue", lty= "dashed")
+lines((mypred$pred -2*mypred$se), col = "blue", lty= "dashed")
+
+
 par(mfrow=c(1,1))
 m <- length(training)
 mypred <- predict(new_fit1, n.ahead=10)
@@ -399,7 +412,7 @@ lines((m+1):(m+10),
 par(mfrow=c(2,1))
 plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
 # transformed data
-plot(spending_data$Year, spent, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
+plot(training, spent, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
 ```
 
 ## Conclusion
