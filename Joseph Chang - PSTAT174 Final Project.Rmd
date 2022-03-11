@@ -235,9 +235,7 @@ new_fit1 <- arima(training.log, order = c(1,1,0), seasonal = list (order = c(1,0
 new_fit1
 AICc(new_fit1)
 
-# new_fit2 <- arima(training,order = c(4,2,2), seasonal = list (order = c(1,0,0), period = 9), method = "ML")
-# new_fit2
-# AICc(new_fit2)
+
 # rerun the for loop
 # stationary because less than abs 1, and all AR are invertible
 
@@ -245,16 +243,22 @@ AICc(new_fit1)
 fit2 <- arima(training.log, order = c(0,1,8), fixed = c(0,0,0,0,0,0,0,NA), method = "ML")
 fit2
 AICc(fit2)
+
+fit2 <- arima(training.log, order = c(0,1,8), method = "ML")
+fit2
+AICc(fit2)
+
+
 # stationary because less than abs 1, and all AR are invertible
 
-fit3 <- arima(training, order = c(2,1,1), method = "ML")
+fit3 <- arima(training.log, order = c(2,1,1), method = "ML")
 fit3
 AICc(fit3)
 
 
 # install.packages("UnitCircle")
-library(UnitCircle)
-uc.check(pol_ = c(0,0.238), plot_output = T)
+#library(UnitCircle)
+#uc.check(pol_ = c(0,0.238), plot_output = T)
 
 ```
 
@@ -329,7 +333,7 @@ This will be model diagnostics for model 1: order = (0,2,1)
 
 ```{r}
 # residual plots
-res2 <- residuals(fit2)
+res2 <- residuals(fit3)
 mean(res2)
 var(res2)
 
@@ -337,13 +341,13 @@ var(res2)
 par(mfrow=c(1,1))
 ts.plot(res2, main  = "Fitted Residuals")
 t <- 1:length(res2)
-fit2.res2 = lm(res2~t)
-abline(fit2.res2)
+fit3.res2 = lm(res2~t)
+abline(fit3.res2)
 abline(h=mean(res2), col = "blue")
 
 # Testing for independence of residuals
-Box.test(res2, lag = 8, type = c("Box-Pierce"), fitdf = 2)
-Box.test(res2, lag = 8, type = c("Ljung-Box"), fitdf = 2)
+Box.test(res2, lag = 8, type = c("Box-Pierce"), fitdf = 3)
+Box.test(res2, lag = 8, type = c("Ljung-Box"), fitdf = 3)
 Box.test(res2^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 
 # test for normality of residuals
