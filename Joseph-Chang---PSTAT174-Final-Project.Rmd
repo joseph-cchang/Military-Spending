@@ -33,15 +33,14 @@ library(UnitCircle)
 
 ## Executive Summary
 
-on own page
+This project focuses on the United States’ defense budget from the years 1960 ~ 2021. The goal of this project was to create a model that could predict the last 10 points (years) of the U.S. Defense Budget and compare it with actual last 10 points (years) of the data.  In order to do this, I began by splitting the original dataset into testing and training sets, with training as the first 51 points and testing as the last 10 points. As described earlier, this allows the training data to predict the future points and compare it with the testing data at the end. As a result, the training data, not the entirety of the original model, is used throughout the project. 
+After training, I made any necessary transformations using Boxcox. I discovered that I needed to transform the training data by taking its log. Next, when I differenced and found smallest variance, I had to difference the log of training at lag 1 once. From there, I could plot the ACF and PACF of my training data and estimate the parameters of the model using a for loop that produced the lowest AICc of the potential models. After model estimation, I considered the two best models from the lowest AICc and began model diagnostics. In this step, I tested if the residuals in my candidate models were independent, had any nonlinear dependence, and were normal. If passed, the model could be considered for forecasting. In the model forecasting, I predicted the 10 future observations from my best model and concluded that my model closely followed the actual model for about the first seven points (years), but then began to diverge from the actual model the rest of the way. As a last step, I predicted 5 extra years from my model in the original dataset just for my curiosity. From this project, I learned that the United States government spends a tremendous amount of money (billions of dollars) on its defense budget.
+
 
 ## Introduction
 
-The data set I plan to use is the United States military defense budget since 1960. This is essentially money the US military has used or uses for its own defense and protecting its citizens against other countries/people. Although the dataset has two other columns dedicated for population of the U.S. and GDP for each respective year, I find the defense budget column most interesting because it matches closely with the history of the United States and the wars it has participated in. Additionally, GDP and population followed a constant, linear relationship, so it was easy to predict and not as suitable for a detailed time series project.
+The data I used shows the United States military defense budget since 1960. The data has a yearly frequency and measures budget spending in terms of billions of USD. Using the website Kaggle, I imported a csv file into RStudios and began to analyze the time series data. Although the original dataset has two other columns dedicated to population and GDP of US for each respective year, I find the defense budget most interesting it matches closely with the history of the United States and the wars it has participated in. For example, after the fall of USSR (1992) and ending the Cold War, US defense spending dipped, and stayed constant. But after 9/11attacks (2001), total spending exponentiated as the government prioritized protecting its own citizens. Both of these historical events are corroborated by the data. Thus, the goal of this project is to create a model that could predict future US spending as close to possible. To solve this problem, I split training and testing sets from the original model, with testing as the last 10 points. Using the training set to predict parameters in my model, I could determine a best model that would represent the trained dataset. In the forecasting step, I plotted a time series on the trained set and predicted 15 steps ahead: 10 for comparison with testing (marked in red) and 5 just for my pleasure (marked in blue). Along with these points were 95 % confidence intervals that marked the margin of error for the predicted points. Both the predicted points and confidence intervals are in blue to signify prediction. The results indicated that the confidence intervals were very wide, meaning margin of error could be large. While the first 7 predicted points were closely related to first 7 actual points, the rest of predicted model showed a very different trend compared to the testing set. I can conclude that if my model were to continue predicting beyond the testing set, it would probably not be very accurate. 
 
-This data is interesting to me because aside from studying statistics and data science, I have long been intrigued with history, especially US history and all the wars it has fought or participated in. This data provides me with an idea of how much the US government spent during the wars and also in the present day. For example, based from looking at the plot, I can infer that during the Vietnam War (1955-1975), the government consistently spent money to protect its own borders, and it wasn't until after 9/11 (2001) that the government began to intensify and exponentiate their spending in the years subsequently after and during the Iraq War. It wasn't until 2011 when Osama bin Laden's death led to the US to decrease their funding.
-
-I plan to split use the original dataset to transform into another dataset. Using this new updated dataset, I will split the data into training and testing. I will use the training dataset to predict and forecast the model and compare it with the testing dataset. In the end, I will compare the testing dataset with the original dataset to make conclusions
 
 ## Data Importation
 
@@ -179,7 +178,8 @@ In dat.1, I noticed that for ACF, lags 1,9,10,11 were outside of the confidence 
 Here, I will estimate coefficients of p and q. I used a for loop function to find the lowest AICc. This for loop will produce candidate models for me to run diagnostics on. \\ Since the highest lag I saw on the ACF for dat.1 was 11, the loop will take into consideration values of q from 0 to 11. For PACF, it is from 0 to 9.
 
 ```{r}
-df <- expand.grid(p=0:9, q=0:11, P=0:1, Q=0:1) 
+df <- expand.grid(p=0:9, q=0:11)
+# , P=0:1, Q=0:1
 df <- cbind(df, AICc=NA)
 
 for (i in 1:nrow(df)) {
@@ -333,7 +333,7 @@ Model 2 does not pass the tests for independence of residuals, but residuals are
 
 ## Best model
 
-Anaylsis of residuals satisfactory?? Since only model 1 passed passed diagnostic checking and has a satisfactory analysis of residuals, I will use model 1.
+Since only the analysis of residuals in model 1 was satisfactory and passed diagnostic checking, I will use model 1.
 
 ```{r}
 new_fit1
@@ -372,7 +372,8 @@ lines((mypred$pred -2*mypred$se), col = "blue", lty= "dashed")
 
 ## Conclusion
 
-Model 1 and 2 both passed diagnostic checking but .. Ultimately, my predicted values followed a straight linear line that would have shown increased defense funding. But, the testing dataset pointed a curve instead. Individuals who helped me on the project include Sunpeng, Youhong, and Raisa Feldman.
+Model 1 and 2 both passed diagnostic checking but .. Ultimately, my predicted model followed closely with the actual model at first, but then became very different towards the end. The goal of creating a model that could predict future values of the original model was achieved. However, it is not very accurate, especially at predicting in the long-term future. Therefore, I would determine not to use my model for predicting defense budget in the future. My model consisted of this formula : (1−0.831B)(1+0.566B^9)(1−B)Xt = Zt . I would like to acknowledge Raisa Feldman, Youhong Lee, and Sunpeng Duan for their contributions and assistance with this project and thank them for taking the time, effort, and energy out of their busy schedules to help me. 
+
 
 ## References
 
