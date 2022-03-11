@@ -44,7 +44,7 @@ I plan to split use the original dataset to transform into another dataset. Usin
 
 ## Data Importation
 
-First, I read in the data and plotted a time series model for the Defense Budget each of the years. Additionally, I created a histogram to visualize the Defense Budget.
+First, I read in the data and plotted a time series model for the Defense Budget each of the years, along with a line for trend in red and the mean in blue. Additionally, I created a histogram to visualize the entire Defense Budget dataset.
 
 ```{r}
 spending_data <- read.csv("/Users/josephchang/Desktop/MilitarySpending.csv.xls")
@@ -53,12 +53,13 @@ plot(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in
 
 plot.ts(spending_data$Year, spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year", type="l")
 
-# added trend and mean
-plot.ts(spending_data$DefenseBudget)
+# added trend 
+plot.ts(spending_data$DefenseBudget, ylab = "Defense budget (in US billion)", xlab = "Year after 1960")
 nt = length(spending_data$DefenseBudget)
 fit <- lm(spending_data$DefenseBudget ~ as.numeric(1:nt))
 abline(fit, col ="red")
 
+# added mean
 mean(spending_data$DefenseBudget)[1]
 abline(h=mean(spending_data$DefenseBudget), col="blue")
 
@@ -71,13 +72,17 @@ hist(spending_data$DefenseBudget, label=TRUE, main = "Histogram of U.S Defense B
 
 I created training and testing sets for spending_data$DefenseBudget, with the last 6 datapoints as the testing set. I chose 6 datapoints because 10% of the observations is around 6.1.
 
+For visualization, I plotted the time series plot for the training set, along with trend and mean.
+
 ```{r}
+### how many test sets are needed ????
+
 # Define training and testing sets
 training = spending_data$DefenseBudget[c(1:51)]
 testing  = spending_data$DefenseBudget[c(52:61)]
 
-# time series plot in training
-plot.ts(training)
+# time series plot in training with trend and mean
+plot.ts(training, ylab = "Defense budget (in US billion)", xlab = "Year after 1960")
 fit <- lm(training ~ as.numeric(1:length(training)))
 abline(fit, col="red")
 abline(h=mean(training), col = "blue")
@@ -88,9 +93,11 @@ Immediate observations: There seems to be a linear trend that is positive but th
 
 # Transformation
 
-Next, since the original data looked skewed, I will make any necessary transformations to make the model stationary and stabilize the variance.
+Next, since the original data looked skewed, I wanted to see if I needed to make any necessary transformations to make the model stationary and to stabilize the variance.
 
 ```{r}
+### need log transform ????
+
 t <- 1:length(training)
 fit <- lm(training~t)
 bcTransform <- boxcox(training ~ t, plotit=TRUE)
@@ -107,7 +114,7 @@ training.sqrt = sqrt(training)
 
 # compare transforms on time series plot
 op=par(mfrow=c(2,2))
-plot.ts(training, main = "Original trained Time Series")
+plot.ts(training, main = "Original Training set")
 plot.ts(spent, main = "Box-cox Transform")
 plot.ts(training.log, main = "Log transform")
 plot.ts(training.sqrt, main = "Square root transform")
@@ -119,14 +126,14 @@ For comparison, I created log and square root transformations as well. In order 
 # histogram of original vs transformed
 op=par(mfrow=c(1,2))
 hist(spent, col = "light blue", main = "Histogram of Transformed Data")
-hist(training, col = "light blue", main = "Histogram of trained Original Data")
+hist(training, col = "light blue", main = "Histogram of Trained Original Data")
 ```
 
 Based from the histogram, the spent dataset looked more symmetric while the original still looked skewed right. Variance also looked more stable in the transformation. As a result, the spent data looks more appropriate to use.
 
 ## Differencing
 
-Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times. As I increased difference each time, I plotted its time series for comparison. I differenced at lag 1
+Then, I want to check if spent needs any differencing. To start, I plotted the time series for the training set for spent differenced once, then twice, then three times at lag 1. As I increased difference each time, I plotted its time series along with its mean and trend for comparison. 
 
 ```{r}
 dat <- diff(training, 1)
