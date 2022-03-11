@@ -425,6 +425,18 @@ lines((mypred$pred -2*mypred$se), col = "blue", lty= "dashed")
 
 par(mfrow=c(1,1))
 m <- length(training)
+mypred <- predict(new_fit1, n.ahead=15)
+
+ts.plot(training, xlim=c(1, length(training)+15), ylim=c(min(training), 2000) , xlab = "Years after 1960", ylab = "Billions of USD")
+
+points((m+1):(m+15), col="red", exp(mypred$pred))
+points((m+1):(m+10), col="blue", testing)
+lines((exp(mypred$pred +2*mypred$se)), col = "blue", lty= "dashed")
+lines((exp(mypred$pred -2*mypred$se)), col = "blue", lty= "dashed")
+
+
+par(mfrow=c(1,1))
+m <- length(training)
 mypred <- predict(new_fit1, n.ahead=10)
 ts.plot(c(lambda*training +1)^(1/lambda), xlim=c(1, length(lambda*training)+10), ylim=c(100,200000000) , xlab = "Years after 1960", ylab = "Billions of USD")
 
