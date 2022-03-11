@@ -186,7 +186,7 @@ Here, I will estimate coefficients of p and q. I used a for loop function to fin
 Since the highest lag I saw on the ACF for dat.1 was 11, the loop will take into consideration values of q from 0 to 11. For PACF, it is from 0 to 9.
 
 ```{r}
-df <- expand.grid(p=0:9, q=0:11) 
+df <- expand.grid(p=0:9, q=0:11, P=0:1, Q=0:1) 
 df <- cbind(df, AICc=NA)
 
 for (i in 1:nrow(df)) {
@@ -194,9 +194,13 @@ for (i in 1:nrow(df)) {
   try(arima.obj <- arima(training.log, order=c(df$p[i],1, df$q[i]), method="ML"))
   if (!is.null(arima.obj)) { df$AICc[i] <- AICc(arima.obj) }
   # print(df[i, ])
+  
+  # seasonal =  list(order=c(df$P[i], 0, df$Q[i]), period=9),
+  
+  
 }
 # this prints all AICc values, starting from the lowest to highest
-df[order(df$AICc),]
+head(df[order(df$AICc),], 5)
 ```
 
 Based from the lowest AICc, I will consider the two best models, which are (1,0) and (0,8), where p and q are represented respectively. 
