@@ -240,9 +240,9 @@ AICc(new_fit1)
 # stationary because less than abs 1, and all AR are invertible
 
 # Final model 2
-fit2 <- arima(training.log, order = c(0,1,8), fixed = c(0,0,0,0,0,0,0,NA), method = "ML")
-fit2
-AICc(fit2)
+new_fit2 <- arima(training.log, order = c(0,1,8), fixed = c(0,0,0,0,0,0,0,0), method = "ML")
+new_fit2
+AICc(new_fit2)
 
 fit2 <- arima(training.log, order = c(0,1,8), method = "ML")
 fit2
@@ -251,9 +251,13 @@ AICc(fit2)
 
 # stationary because less than abs 1, and all AR are invertible
 
-fit3 <- arima(training.log, order = c(2,1,1), method = "ML")
+fit3 <- arima(training.log, order = c(10,1,0), method = "ML")
 fit3
 AICc(fit3)
+
+new_fit3 <- arima(training.log, order = c(10,1,0),fixed=c(NA,0,0,0,0,0,0,0,NA,NA), method = "ML")
+new_fit3
+AICc(new_fit3)
 
 
 # install.packages("UnitCircle")
@@ -346,7 +350,7 @@ abline(fit3.res2)
 abline(h=mean(res2), col = "blue")
 
 # Testing for independence of residuals
-Box.test(res2, lag = 8, type = c("Box-Pierce"), fitdf = 3)
+Box.test(res2, lag = 8, type = c("Box-Pierce"), fitdf = 8)
 Box.test(res2, lag = 8, type = c("Ljung-Box"), fitdf = 3)
 Box.test(res2^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 
@@ -407,7 +411,7 @@ new_fit1
 # $(1-B)^2(1+0.541B^9)Xt$ = (1-0.45B)Zt, Zt ~ WN(0, 155)
 ```
 
-Final model should be $(1-B)(1+0.541B^9)X_t = (1-0.45B)Z_t, Z_t ~ WN(0, 155)$
+Final model should be $(1-0.831B)(1+0.566B^9)(1-B)X_t = Z_t, Z_t ~ WN(0, 0.00271)$
 
 ## Data Forecasting
 
@@ -416,10 +420,10 @@ In the final step of forecasting, I will predict 10 future observations (colored
 ```{r}
 # Predict 10 future observations on data and plot
 par(mfrow=c(1,1))
-m <- length(training)
+m <- length(training.log)
 mypred <- predict(new_fit1, n.ahead=15)
 
-ts.plot(training, xlim=c(1, length(training)+15), ylim=c(min(training), max(mypred$pred +2*mypred$se)) , xlab = "Years after 1960", ylab = "Billions of USD")
+ts.plot(training.log, xlim=c(1, length(training.log)+15), ylim=c(min(training.log), max(mypred$pred +2*mypred$se)) , xlab = "Years after 1960", ylab = "Billions of USD")
 
 points((m+1):(m+15), col="red", mypred$pred)
 points((m+1):(m+10), col="blue", testing)
