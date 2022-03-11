@@ -207,7 +207,7 @@ From the histogram, the original data seemed skewed right. dat.1 looked less ske
 Here, I will estimate coefficients of p and q. I used a for loop function to find the lowest AICc. This for loop will produce candidate models for me to run diagnostics on.
 
 ```{r}
-df <- expand.grid(p=0:11, q=0:10) 
+df <- expand.grid(p=0:11, q=0:9) 
 df <- cbind(df, AICc=NA)
 
 for (i in 1:nrow(df)) {
@@ -268,7 +268,7 @@ This will be model diagnostics for model 1: order = (1,1,1). For testing the ind
 
 ```{r}
 # residual plots
-res <- residuals(fit1)
+res <- residuals(new_fit1)
 mean(res)
 var(res)
 
@@ -276,8 +276,8 @@ var(res)
 par(mfrow=c(1,1))
 ts.plot(res, main  = "Fitted Residuals")
 t <- 1:length(res)
-fit1.res = lm(res~t)
-abline(fit1.res)
+new_fit1.res = lm(res~t)
+abline(new_fit1.res)
 abline(h=mean(res), col = "blue")
 
 # Testing independence
