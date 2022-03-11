@@ -66,10 +66,9 @@ hist(spending_data$DefenseBudget, label=TRUE, main = "Histogram of U.S Defense B
 
 Immediate observations: There seems to be a linear trend that is positive but there is no seasonality and no apparent sharp change in behavior. There is non-constant variance and mean. The histogram seems to be skewed right
 
-
 ## Testing and training for the original data
 
-I created training and testing sets for spending_data$DefenseBudget, with the last 6 datapoints as the testing set. I chose 6 datapoints because 10% of the observations is around 6.1.
+I created training and testing sets for spending_data\$DefenseBudget.
 
 For visualization, I plotted the time series plot for the training set, along with trend and mean.
 
@@ -84,7 +83,6 @@ fit <- lm(training ~ as.numeric(1:length(training)))
 abline(fit, col="red")
 abline(h=mean(training), col = "blue")
 ```
-
 
 # Transformation
 
@@ -120,11 +118,11 @@ hist(training.bc, col = "light blue", main = "Histogram of Boxcox transformed Da
 hist(training.log, col = "light blue", main = "Histogram of Log transformed Data", breaks="Sturges")
 ```
 
-Based from the histogram, the original is still looking skewed right. The boxcox transformation looks more symmetric. Log transformation, to me, looks even more symmetric than  Variance also looked more stable in the transformation. As a result, the log transformation looks the most appropriate to use.
+Based from the histogram, the original is still looking skewed right. The boxcox transformation looks more symmetric. Log transformation, to me, looks even more symmetric than Variance also looked more stable in the transformation. As a result, the log transformation looks the most appropriate to use.
 
 ## Differencing
 
-Then, I want to check if training.log needed any differencing. To start, I differenced the log of training set, then at d=2, and d=3. All differencing took place at lag 1. 
+Then, I want to check if training.log needed any differencing. To start, I differenced the log of training set, then at d=2, and d=3. All differencing took place at lag 1.
 
 ```{r}
 dat.1 <- diff(training.log, 1)
@@ -140,8 +138,7 @@ var(dat.3)
 
 To determine when to stop, I checked the variances for the 3 differences. I concluded that I only need to difference when d=1 because variance is lowest when d=1. At d=2, variance increased again. Therefore, d=1 is most appropriate.
 
-\\
-I plotted the time series for dat.1 along with its mean and trend for comparison and its histogram
+\\ I plotted the time series for dat.1 along with its mean and trend for comparison and its histogram
 
 ```{r}
 # time series plot for dat.1
@@ -159,7 +156,6 @@ curve(dnorm(x,m,std), add = T)
 
 The time series plot for dat.1 looks somewhat stationary and the histogram looks somewhat gaussian.
 
-
 ## Model Identification
 
 For comparison, I plotted ACF and PACF for training.log and dat.1. I will compare histograms of the training, dat.1. I set maximum lag at 40 because since there is no seasonality in training, I won't need an excessive amount of data.
@@ -171,19 +167,16 @@ acf(training.log , lag.max=40, main = "ACF of training.log", ylim=c(-1,1))
 pacf(training.log, lag.max=40, main = "PACF of training.log", ylim=c(-1,1))
 
 # acf, pacf for dat.1
-acf(dat.1, lag.max = 40, main="ACF of difference once", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
-pacf(dat.1, lag.max = 40, main="PACF of difference once", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
+acf(dat.1, lag.max = 40, main="ACF of difference at lag 1 once", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
+pacf(dat.1, lag.max = 40, main="PACF of difference at lag 1 once", ylim=c(-1,1),xlab="h", ylab= expression(hat(rho)[X](h)))
 
 ```
 
 In dat.1, I noticed that for ACF, lags 1,9,10,11 were outside of the confidence interval, with lag 9 being the furthest outside. For PACF, both lags 1 and 9 outside confidence interval, with 9 again being the furthest and highest lag to be outside.
 
-
 ## Model Estimation
 
-Here, I will estimate coefficients of p and q. I used a for loop function to find the lowest AICc. This for loop will produce candidate models for me to run diagnostics on. 
-\\
-Since the highest lag I saw on the ACF for dat.1 was 11, the loop will take into consideration values of q from 0 to 11. For PACF, it is from 0 to 9.
+Here, I will estimate coefficients of p and q. I used a for loop function to find the lowest AICc. This for loop will produce candidate models for me to run diagnostics on. \\ Since the highest lag I saw on the ACF for dat.1 was 11, the loop will take into consideration values of q from 0 to 11. For PACF, it is from 0 to 9.
 
 ```{r}
 df <- expand.grid(p=0:9, q=0:11, P=0:1, Q=0:1) 
@@ -203,8 +196,7 @@ for (i in 1:nrow(df)) {
 head(df[order(df$AICc),], 5)
 ```
 
-Based from the lowest AICc, I will consider the two best models, which are (1,0) and (0,8), where p and q are represented respectively. 
-\\
+Based from the lowest AICc, I will consider the two best models, which are (1,0) and (0,8), where p and q are represented respectively. \\
 
 Since the ACF of dat.1 showed lags 1, 9, 10,11 to be outside the confidence interval as well as PACF outside at lag 9, I suspected there might be some potential use of the SARIMA model, with period at 9. I tested this on fit_test with order as (9,1,0). The results showed me that coefficients could be zero from ar2 to ar8. This led me to create new_fit_test to reduce the model with fixed values of zero from ar2 to ar8. After comparing the AICc of fit_test and new_fit_test, I determined that SARIMA model was needed.
 
@@ -220,7 +212,6 @@ AICc(new_fit_test)
 
 I first tested fit1 at (1,1,0) like before because it produced the lowest AICC. Then, I created new_fit1 to reduce the model with period at 9 and p = P, which was 1. Indeed, the new_fit1 produced a lower AICc then fit1.
 
-
 ```{r}
 # Final model 1
 fit1 <- arima(training.log, order = c(1,1,0), method = "ML")
@@ -232,10 +223,10 @@ new_fit1
 AICc(new_fit1)
 
 ```
+
 I determined that new_fit1 or model 1 is stationary because its phi value is less than the absolute value of 1 and all AR models are invertible.
 
-\\
-Second, I test fit2 at (0,1,8) because it produced the second-lowest AICc. Since fit2 has no AR part, I created new_fit2 to find which coefficents were 0, which was only at ma3. This led me to create a SARIMA model for fit2 called new_fit22. After comparison of fit2, new_fit2, and new_fit22, new_fit22 produced lowest AICc.
+\\ Second, I test fit2 at (0,1,8) because it produced the second-lowest AICc. Since fit2 has no AR part, I created new_fit2 to find which coefficents were 0, which was only at ma3. This led me to create a SARIMA model for fit2 called new_fit22. After comparison of fit2, new_fit2, and new_fit22, new_fit22 produced lowest AICc.
 
 ```{r}
 # Final model 2
@@ -294,7 +285,7 @@ qqnorm(res)
 qqline(res, col = "blue")
 ```
 
-Model 1 passes all tests and residuals are normal. ACF of residuals^2 shows nonlinear dependence
+Model 1 passes all tests and residuals are normal. ACF of residuals\^2 shows nonlinear dependence
 
 ```{r}
 # ACF and PACF of residuals
@@ -304,8 +295,6 @@ pacf(res, main = "Partial Autocorrelation", lag.max = 40)
 ```
 
 The ACF and PACF of residuals shows no lags outside of confidence interval. The fitted residuals are to AR(0), so it is white noise. This passes diagnostic checking for model 1.
-
-
 
 ## Model Diagnostics for model 2
 
@@ -340,13 +329,11 @@ qqnorm(res2)
 qqline(res2, col = "blue")
 ```
 
-Model 2 does not pass the tests for independence of residuals, but residuals are normal. Therefore, model 2 cannot be used. 
-
-
+Model 2 does not pass the tests for independence of residuals, but residuals are normal. Therefore, model 2 cannot be used.
 
 ## Best model
 
-Anaylsis of residuals satisfactory?? Since only model 1 passed  passed diagnostic checking and has a satisfactory analysis of residuals, I will use model 1.
+Anaylsis of residuals satisfactory?? Since only model 1 passed passed diagnostic checking and has a satisfactory analysis of residuals, I will use model 1.
 
 ```{r}
 new_fit1
