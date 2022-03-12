@@ -2,18 +2,16 @@
 title: "PSTAT174 Final Project"
 author: "Joseph Chang"
 date: "3/11/2022"
-output:
-df_print: paged
+output: pdf_document
 ---
 
-```{r setup, include=FALSE, echo = FALSE}
+```{r setup, include=FALSE}
 # set global chunk options: images will be 7x5 inches
 knitr::opts_chunk$set(fig.width=7, fig.height=5, echo =TRUE, message=FALSE, warning = FALSE)
 options(digits = 4)
 ```
 
 ```{r}
-# library functions
 library(knitr)
 library(tidyverse) 
 library(ISLR) 
@@ -26,7 +24,6 @@ library(tsdl)
 library(forecast)
 library(astsa)
 library(qpcR)
-library(UnitCircle)
 ```
 
 # Executive Summary
@@ -354,10 +351,4 @@ I used this site to obtain my original dataset: <https://www.kaggle.com/brandonc
 
 ## Appendix
 
-```{r get-labels, echo = FALSE}
-labs = knitr::all_labels()
-labs = setdiff(labs, c("setup", "get-labels"))
-```
 
-```{r all-code, ref.label=labs, eval=FALSE, echo = TRUE}
-```
