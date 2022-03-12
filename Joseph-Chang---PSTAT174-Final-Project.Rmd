@@ -95,7 +95,7 @@ lambda = bcTransform$x[which(bcTransform$y == max(bcTransform$y))]
 training.bc = (1/lambda)*(training^lambda-1)
 ```
 
-Using the Box-Cox transformation, the BcTransform command gave me the value of lambda to be around 0.1414. Then I named the box cox transformation data training.bc. Note: I do notice that 0 is in the confidence interval.
+Using the Box-Cox transformation, the BcTransform command gave me the value of lambda to be around 0.1414. Then I named the boxcox transformation data as training.bc. I do notice that 0 is in the confidence interval, so a log transformation could be needed.
 
 ```{r}
 # comparison of original, boxcox transformation, and log transformation
@@ -121,7 +121,7 @@ Based from the histogram, the original is still looking skewed right. The boxcox
 
 ## Differencing
 
-Then, I want to check if training.log needed any differencing. To start, I differenced the log of training set, then at d=2, and d=3. All differencing took place at lag 1.
+Then, I want to check if training.log needed any differencing to remove trend. To start, I differenced the log of training set, then at d=2, and d=3. All differencing took place at lag 1.
 
 ```{r}
 dat.1 <- diff(training.log, 1)
@@ -137,7 +137,7 @@ var(dat.3)
 
 To determine when to stop, I checked the variances for the 3 differences. I concluded that I only need to difference when d=1 because variance is lowest when d=1. At d=2, variance increased again. Therefore, d=1 is most appropriate.
 
-\\ I plotted the time series for dat.1 along with its mean and trend for comparison and its histogram
+I plotted the time series for dat.1 along with its mean and trend for comparison and its histogram
 
 ```{r}
 # time series plot for dat.1
