@@ -33,7 +33,7 @@ library(UnitCircle)
 
 ## Executive Summary
 
-This project focuses on the United States’ defense budget from the years 1960 ~ 2021. The goal of this project was to create a model that could predict the last 10 points (years) of the U.S. Defense Budget and compare it with actual last 10 points (years) of the data.  In order to do this, I began by splitting the original dataset into testing and training sets, with training as the first 51 points and testing as the last 10 points. As described earlier, this allows the training data to predict the future points and compare it with the testing data at the end. As a result, the training data, not the entirety of the original model, is used throughout the project. 
+This project focuses on the United States’ defense budget from the years 1960 ~ 2021. The goal of this project was to create a model that could predict the last 10 years (2012-2021) of the U.S. Defense Budget and compare it with actual last 10 years (2012-2021) of the data.  In order to do this, I began by splitting the original dataset into testing and training sets, with training as the first 51 points and testing as the last 10 points. As described earlier, this allows the training data to predict the future points and compare it with the testing data at the end. As a result, the training data, not the entirety of the original model, is used throughout the project. 
 After training, I made any necessary transformations using Boxcox. I discovered that I needed to transform the training data by taking its log. Next, when I differenced and found smallest variance, I had to difference the log of training at lag 1 once. From there, I could plot the ACF and PACF of my training data and estimate the parameters of the model using a for loop that produced the lowest AICc of the potential models. After model estimation, I considered the two best models from the lowest AICc and began model diagnostics. In this step, I tested if the residuals in my candidate models were independent, had any nonlinear dependence, and were normal. If passed, the model could be considered for forecasting. In the model forecasting, I predicted the 10 future observations from my best model and concluded that my model closely followed the actual model for about the first seven points (years), but then began to diverge from the actual model the rest of the way. As a last step, I predicted 5 extra years from my model in the original dataset just for my curiosity. From this project, I learned that the United States government spends a tremendous amount of money (billions of dollars) on its defense budget.
 
 
@@ -173,18 +173,23 @@ pacf(dat.1, lag.max = 40, main="PACF of difference at lag 1 once", ylim=c(-1,1),
 
 In dat.1, I noticed that for ACF, lags 1,9,10,11 were outside of the confidence interval, with lag 9 being the furthest outside. For PACF, both lags 1 and 9 outside confidence interval, with 9 again being the furthest and highest lag to be outside.
 
+peak at 9, no at 18, q= 0:1 because 
 ## Model Estimation
 
-Here, I will estimate coefficients of p and q. I used a for loop function to find the lowest AICc. This for loop will produce candidate models for me to run diagnostics on. \\ Since the highest lag I saw on the ACF for dat.1 was 11, the loop will take into consideration values of q from 0 to 11. For PACF, it is from 0 to 9.
+Here, I will estimate coefficients of p and q. I used a for loop function to find the lowest AICc. This for loop will produce candidate models for me to run diagnostics on. 
+Based from the ACF of dat.1, lags 1, 9, 10,11 were outside the confidence interval and for PACF lags 1 and 9 were outside. Therefore, I suspected there might be some seasonality and the potential use of the SARIMA model, with period at 9. 
+
+In both the ACF and PACF, the peak is at lag 9 while lag 18 does not show to be outside. Thus in my for loop,  I put values of both P and Q to be 0 or 1. As a result, p and q will also take on the same values as P and Q because both ACF and PACF showed lag 1 to be outside.
+
 
 ```{r}
-df <- expand.grid(p=0:9, q=0:11)
+df <- expand.grid(p=0:1, q=0:1, P= 0:1, Q=0:1)
 # , P=0:1, Q=0:1
 df <- cbind(df, AICc=NA)
 
 for (i in 1:nrow(df)) {
   sarima.obj <- NULL
-  try(arima.obj <- arima(training.log, order=c(df$p[i],1, df$q[i]), method="ML"))
+  try(arima.obj <- arima(training.log, order=c(df$p[i],1, df$q[i]), seasonal =  list(order=c(df$P[i], 0, df$Q[i]), period=9), method="ML"))
   if (!is.null(arima.obj)) { df$AICc[i] <- AICc(arima.obj) }
   # print(df[i, ])
   
@@ -196,54 +201,27 @@ for (i in 1:nrow(df)) {
 head(df[order(df$AICc),], 5)
 ```
 
-Based from the lowest AICc, I will consider the two best models, which are (1,0) and (0,8), where p and q are represented respectively. \\
+Based from the lowest AICc, I will consider the two best models, which are SARIMA (1,1,0),(1,0,0) , seasonality at 9 and SARIMA (1,1,0), (1,0,1), seasonality at 9. 
 
-Since the ACF of dat.1 showed lags 1, 9, 10,11 to be outside the confidence interval as well as PACF outside at lag 9, I suspected there might be some potential use of the SARIMA model, with period at 9. I tested this on fit_test with order as (9,1,0). The results showed me that coefficients could be zero from ar2 to ar8. This led me to create new_fit_test to reduce the model with fixed values of zero from ar2 to ar8. After comparing the AICc of fit_test and new_fit_test, I determined that SARIMA model was needed.
 
-```{r}
-fit_test <- arima(training.log, order = c(9,1,0), method = "ML")
-fit_test
-AICc(fit_test)
-
-new_fit_test <- arima(training.log, order = c(9,1,0),fixed=c(NA,0,0,0,0,0,0,0,NA), method = "ML")
-new_fit_test
-AICc(new_fit_test)
-```
-
-I first tested fit1 at (1,1,0) like before because it produced the lowest AICC. Then, I created new_fit1 to reduce the model with period at 9 and p = P, which was 1. Indeed, the new_fit1 produced a lower AICc then fit1.
+Model 1 will be at (1,1,0),(1,0,0) , seasonality 9 
 
 ```{r}
 # Final model 1
-fit1 <- arima(training.log, order = c(1,1,0), method = "ML")
+fit1 <- arima(training.log, order = c(1,1,0), seasonal =  list(order=c(1,0,0), period=9), method = "ML")
 fit1
 AICc(fit1)
-
-new_fit1 <- arima(training.log, order = c(1,1,0), seasonal = list(order = c(1,0,0), period = 9), method = "ML")
-new_fit1
-AICc(new_fit1)
-
 ```
 
-I determined that new_fit1 or model 1 is stationary because its phi value is less than the absolute value of 1 and all AR models are invertible.
+I determined that model 1 is stationary because its phi value is less than the absolute value of 1 and all AR models are invertible.
 
-\\ Second, I test fit2 at (0,1,8) because it produced the second-lowest AICc. Since fit2 has no AR part, I created new_fit2 to find which coefficents were 0, which was only at ma3. This led me to create a SARIMA model for fit2 called new_fit22. After comparison of fit2, new_fit2, and new_fit22, new_fit22 produced lowest AICc.
+Second, I test fit2 at (1,1,0),(1,0,1), period=9.
 
 ```{r}
 # Final model 2
-fit2 <- arima(training.log, order = c(0,1,8), method = "ML")
+fit2 <- arima(training.log, order = c(1,1,0), seasonal =  list(order=c(1,0,1), period=9), method = "ML")
 fit2
 AICc(fit2)
-
-
-new_fit2 <- arima(training.log, order = c(0,1,8), fixed = c(0,0,NA,0,0,0,0,0), method = "ML")
-new_fit2
-AICc(new_fit2)
-
-
-new_fit22 <- arima(training.log, order = c(0,1,8), seasonal = list(order = c(1,0,0), period = 9), method = "ML")
-new_fit22
-AICc(new_fit22)
-
 
 # check invertiblity of model 2
 uc.check(pol_ = c(0,0,0.311, 0, 0, 0, 0, 0), plot_output = T)
@@ -258,7 +236,7 @@ This will be model diagnostics for model 1: order = (1,1,0). For testing the ind
 
 ```{r}
 # residual plots
-res <- residuals(new_fit1)
+res <- residuals(fit1)
 mean(res)
 var(res)
 
@@ -266,13 +244,13 @@ var(res)
 par(mfrow=c(1,1))
 ts.plot(res, main  = "Fitted Residuals")
 t <- 1:length(res)
-new_fit1.res = lm(res~t)
-abline(new_fit1.res)
+fit1.res = lm(res~t)
+abline(fit1.res)
 abline(h=mean(res), col = "blue")
 
 # Testing independence
-Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 1)
-Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 1)
+Box.test(res, lag = 8, type = c("Box-Pierce"), fitdf = 2)
+Box.test(res, lag = 8, type = c("Ljung-Box"), fitdf = 2)
 Box.test(res^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 
 # test for normality of residuals
@@ -315,8 +293,8 @@ abline(fit2.res2)
 abline(h=mean(res2), col = "blue")
 
 # Testing for independence of residuals
-Box.test(res2, lag = 8, type = c("Box-Pierce"), fitdf = 8)
-Box.test(res2, lag = 8, type = c("Ljung-Box"), fitdf = 8)
+Box.test(res2, lag = 8, type = c("Box-Pierce"), fitdf = 3)
+Box.test(res2, lag = 8, type = c("Ljung-Box"), fitdf = 3)
 Box.test(res2^2, lag = 8, type = c("Ljung-Box"), fitdf = 0)
 
 # test for normality of residuals
@@ -329,17 +307,26 @@ qqnorm(res2)
 qqline(res2, col = "blue")
 ```
 
-Model 2 does not pass the tests for independence of residuals, but residuals are normal. Therefore, model 2 cannot be used.
+Model 2 passes all tests and residuals are normal. ACF of residuals\^2 shows nonlinear dependence
+
+```{r}
+# ACF and PACF of residuals
+par(mfrow=c(1,2))
+acf(res2, main = "Autocorrelation", lag.max = 40)
+pacf(res2, main = "Partial Autocorrelation", lag.max = 40)
+```
+
+The ACF and PACF of residuals shows no lags outside of confidence interval. The fitted residuals are to AR(0), so it is white noise. This passes diagnostic checking for model 2.
 
 ## Best model
 
-Since only the analysis of residuals in model 1 was satisfactory and passed diagnostic checking, I will use model 1.
+Since the analysis of residuals in model 1 and 2 was satisfactory and pass diagnostic checking, I will consider principle of parsimony, therefore I will only use fit1 due to less parameters.
 
 ```{r}
-new_fit1
+fit1
 ```
 
-Final model should be $(1-0.831B)(1+0.566B^9)(1-B)X_t = Z_t, Z_t ~ WN(0, 0.00271)$
+Final model should be $(1-0.83B)(1+0.566B^9)(1-B)X_t = Z_t, Z_t ~ WN(0, 0.00271)$
 
 ## Data Forecasting
 
@@ -348,7 +335,7 @@ In the final step of forecasting, I will predict 10 future observations (colored
 ```{r}
 # Predict 10 future observations on data and plot on original
 m <- length(training)
-mypred <- predict(new_fit1, n.ahead=15)
+mypred <- predict(fit1, n.ahead=15)
 
 ts.plot(training, xlim=c(1, length(training)+15), ylim=c(min(training), 1000) , xlab = "Years after 1960", ylab = "Billions of USD")
 
@@ -361,7 +348,7 @@ lines((exp(mypred$pred -2*mypred$se)), col = "blue", lty= "dashed")
 
 # predict 10 future observations and plot on transformed data
 m <- length(training.log)
-mypred <- predict(new_fit1, n.ahead=10)
+mypred <- predict(fit1, n.ahead=10)
 
 ts.plot(training.log, xlim=c(1, length(training.log)+10), ylim=c(min(training.log), max(mypred$pred +2*mypred$se)) , xlab = "Years after 1960", ylab = "Billions of USD")
 
@@ -369,6 +356,8 @@ points((m+1):(m+10), col="blue", mypred$pred)
 lines((mypred$pred +2*mypred$se), col = "blue", lty= "dashed")
 lines((mypred$pred -2*mypred$se), col = "blue", lty= "dashed")
 ```
+
+seasonality was there, but the period might have been wrong. 
 
 ## Conclusion
 
