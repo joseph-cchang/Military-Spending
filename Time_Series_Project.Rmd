@@ -80,7 +80,7 @@ abline(fit, col="red")
 abline(h=mean(training), col = "blue")
 
 # histogram of original data points
-hist(training, label=TRUE, main = "Histogram of training set", breaks="Sturges", xlab = "Defense Budget (in US billion)")
+hist(training, label=TRUE, main = "Histogram of training set", breaks= "Sturges", xlab = "Defense Budget (in US billion)")
 ```
 
 Based from the original data and training data, both look about the same and non-stationary. The training data appears to have a linear positive trend with no seasonality or sharpe changes. There is still non-constant variance and mean, where mean is now 252.4 billion USD. The histogram still looks skewed right.
