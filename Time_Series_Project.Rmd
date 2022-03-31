@@ -1,5 +1,5 @@
 ---
-title: "PSTAT174 Final Project"
+title: "History of Military Spending"
 author: "Joseph Chang"
 date: "March 11th, 2022"
 output:
@@ -218,7 +218,7 @@ Both Model 1 and 2 are stationary because their phi values are less than the abs
 
 # Model Diagnostics for Model 1
 
-This will be model diagnostics for model 1: SARIMA (1,1,0),(1,0,0), period at 9. I found mean then variance of the residuals of model 1.
+This will be model diagnostics for model 1: SARIMA (1,1,0),(1,0,0), period at 9. I found mean then variance of the residuals of model 1. Since the training data has 51 observations, the box.test will have sqrt of 65 or around 7.
 
 ```{r, echo = FALSE}
 # residual plots
@@ -235,9 +235,9 @@ abline(fit1.res)
 abline(h=mean(res), col = "blue")
 
 # Testing independence of residuals
-Box.test(res, lag = sqrt(61), type = c("Box-Pierce"), fitdf = 2)
-Box.test(res, lag = sqrt(61), type = c("Ljung-Box"), fitdf = 2)
-Box.test(res^2, lag = sqrt(61), type = c("Ljung-Box"), fitdf = 0)
+Box.test(res, lag = 7, type = c("Box-Pierce"), fitdf = 2)
+Box.test(res, lag = 7, type = c("Ljung-Box"), fitdf = 2)
+Box.test(res^2, lag = 7, type = c("Ljung-Box"), fitdf = 0)
 
 # Testing normality of residuals
 shapiro.test(res)
@@ -262,7 +262,7 @@ The ACF and PACF of residuals shows no lags outside of confidence interval. The 
 
 # Model Diagnostics for Model 2
 
-This will be model diagnostics for model 2: SARIMA (1,1,0),(1,0,1), period at 9. I found mean then variance of the residuals of model 2.
+This will be model diagnostics for model 2: SARIMA (1,1,0),(1,0,1), period at 9. I found mean then variance of the residuals of model 2. Since the training data has 51 observations, the box.test will have sqrt of 65 or around 7.
 
 ```{r, echo = FALSE}
 # residual plots
@@ -279,9 +279,9 @@ abline(fit2.res)
 abline(h=mean(res2), col = "blue")
 
 # Testing independence of residuals
-Box.test(res2, lag = sqrt(61), type = c("Box-Pierce"), fitdf = 3)
-Box.test(res2, lag = sqrt(61), type = c("Ljung-Box"), fitdf = 3)
-Box.test(res2^2, lag = sqrt(61), type = c("Ljung-Box"), fitdf = 0)
+Box.test(res2, lag = 7, type = c("Box-Pierce"), fitdf = 3)
+Box.test(res2, lag = 7, type = c("Ljung-Box"), fitdf = 3)
+Box.test(res2^2, lag = 7, type = c("Ljung-Box"), fitdf = 0)
 
 # Testing normality of residuals
 shapiro.test(res2)
