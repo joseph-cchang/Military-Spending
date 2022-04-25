@@ -1,2 +1,2 @@
 # Military-Spending
-This is the final project for PSTAT174
+This is the project for PSTAT174 - Time Series
